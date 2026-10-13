@@ -104,6 +104,17 @@ def index():
                            keyword=keyword, category=category)
 
 
+@app.route('/healthz')
+def healthz():
+    """健康检查端点：供 Render / 监控探针使用，顺带验证数据库连通性。"""
+    try:
+        query_db('SELECT 1', one=True)
+        db_ok = True
+    except Exception:
+        db_ok = False
+    return {'status': 'ok' if db_ok else 'degraded', 'database': db_ok}, (200 if db_ok else 503)
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
