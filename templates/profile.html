@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}个人中心 - 중고캠퍼스{% endblock %}
+{% block content %}
+<div class="profile-hero">
+    <div class="profile-hero-avatar">
+        {{ current_user.nickname[0] }}
+    </div>
+    <div class="profile-hero-info">
+        <h1>个人中心（{{ current_user.nickname }} · {{ current_user.school }}）</h1>
+        <div class="profile-hero-badge">
+            🏫 {{ current_user.school }}
+        </div>
+    </div>
+</div>
+
+<div class="tabs">
+    <a href="{{ url_for('profile', tab='published') }}" class="tab {% if tab == 'published' %}active{% endif %}">我的发布</a>
+    <a href="{{ url_for('profile', tab='applied') }}" class="tab {% if tab == 'applied' %}active{% endif %}">我的申请</a>
+    <a href="{{ url_for('profile', tab='favorites') }}" class="tab {% if tab == 'favorites' %}active{% endif %}">我的收藏</a>
+</div>
+
+{% if tab == 'published' %}
+    {% if items %}
+        {% for item in items %}
+            <div class="profile-item">
+                {% if item.image_base64 %}
+                    <img src="{{ item.image_base64 }}" alt="{{ item.title }}" class="profile-item-img">
+                {% else %}
+                    <div class="profile-item-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;">暂无图</div>
+                {% endif %}
+                <div class="profile-item-info">
+                    <div class="profile-item-title">
+                        <span>{{ item.title }}</span>
+                        {% if item.status == '在售' %}
+                            <span class="item-tag tag-status-on">{{ item.status }}</span>
+                        {% elif item.status == '已约定' %}
+                            <span class="item-tag tag-status-reserved">{{ item.status }}</span>
+                        {% else %}
+                            <span class="item-tag tag-status-done">{{ item.status }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="profile-item-price">₩{{ "{:,}".format(item.price) }}</div>
+                    <div class="profile-item-meta">
+                        {{ item.category }} · {{ item.condition }} · 发布于 {{ item.created_at|time_ago }}
+                    </div>
+                    <div class="profile-item-actions">
+                        <a href="{{ url_for('detail', item_id=item.id) }}" class="btn btn-secondary btn-sm">查看详情</a>
+                        <a href="{{ url_for('edit_item', item_id=item.id) }}" class="btn btn-secondary btn-sm">编辑</a>
+                        <form method="POST" action="{{ url_for('delete_item', item_id=item.id) }}" style="display:inline;" onsubmit="return confirm('确定删除？');">
+                            <button type="submit" class="btn btn-danger btn-sm">删除</button>
+                        </form>
+                    </div>
+
+                    {% if applications_by_item[item.id] %}
+                        <div style="margin-top:14px;">
+                            <div style="font-size:13.5px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">
+                                收到的申请（{{ applications_by_item[item.id]|length }}）
+                            </div>
+                            {% for app in applications_by_item[item.id] %}
+                                <div class="application-card">
+                                    <div class="application-info">
+                                        <strong>{{ app.buyer_nickname }}</strong>（{{ app.buyer_school }}）·
+                                        {% if app.status == '申请中' %}
+                                            <span class="item-tag tag-status-on">{{ app.status }}</span>
+                                        {% elif app.status == '已约定' %}
+                                            <span class="item-tag tag-status-reserved">{{ app.status }}</span>
+                                        {% else %}
+                                            <span class="item-tag tag-status-done">{{ app.status }}</span>
+                                        {% endif %}
+                                        · {{ app.created_at|time_ago }}
+                                    </div>
+                                    {% if app.message %}
+                                        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">留言：{{ app.message }}</div>
+                                    {% endif %}
+                                    <div class="application-actions">
+                                        {% if app.status == '申请中' %}
+                                            <form method="POST" action="{{ url_for('accept_application', app_id=app.id) }}" style="display:inline;">
+                                                <button type="submit" class="btn btn-primary btn-sm">同意约定</button>
+                                            </form>
+                                        {% elif app.status == '已约定' %}
+                                            <form method="POST" action="{{ url_for('complete_application', app_id=app.id) }}" style="display:inline;">
+                                                <button type="submit" class="btn btn-primary btn-sm">确认完成</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>你还没有发布任何商品</p>
+            <p style="margin-top:16px;"><a href="{{ url_for('publish') }}" class="btn btn-primary btn-sm">去发布第一个商品</a></p>
+        </div>
+    {% endif %}
+
+{% elif tab == 'applied' %}
+    {% if applications %}
+        {% for app in applications %}
+            <div class="profile-item">
+                {% if app.item_image %}
+                    <img src="{{ app.item_image }}" alt="{{ app.item_title }}" class="profile-item-img">
+                {% else %}
+                    <div class="profile-item-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;">暂无图</div>
+                {% endif %}
+                <div class="profile-item-info">
+                    <div class="profile-item-title">
+                        <a href="{{ url_for('detail', item_id=app.item_id) }}">{{ app.item_title }}</a>
+                        {% if app.status == '申请中' %}
+                            <span class="item-tag tag-status-on">{{ app.status }}</span>
+                        {% elif app.status == '已约定' %}
+                            <span class="item-tag tag-status-reserved">{{ app.status }}</span>
+                        {% else %}
+                            <span class="item-tag tag-status-done">{{ app.status }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="profile-item-price">₩{{ "{:,}".format(app.item_price) }}</div>
+                    <div class="profile-item-meta">
+                        卖家：{{ app.seller_nickname }} · 申请于 {{ app.created_at|time_ago }}
+                    </div>
+                    {% if app.message %}
+                        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">我的留言：{{ app.message }}</div>
+                    {% endif %}
+                    <div class="profile-item-actions">
+                        <a href="{{ url_for('detail', item_id=app.item_id) }}" class="btn btn-secondary btn-sm">查看商品</a>
+                        {% if app.status == '已约定' %}
+                            <form method="POST" action="{{ url_for('complete_application', app_id=app.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-primary btn-sm">确认完成</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>你还没有提交过意向申请</p>
+            <p style="margin-top:16px;"><a href="{{ url_for('index') }}" class="btn btn-primary btn-sm">去逛逛商品</a></p>
+        </div>
+    {% endif %}
+
+{% elif tab == 'favorites' %}
+    {% if favorites %}
+        <div class="items-grid">
+            {% for fav in favorites %}
+                <a href="{{ url_for('detail', item_id=fav.item_id) }}" class="item-card">
+                    <div class="item-card-media">
+                        {% if fav.image_base64 %}
+                            <img src="{{ fav.image_base64 }}" alt="{{ fav.title }}" class="item-card-img">
+                        {% else %}
+                            <div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:14px;">暂无图片</div>
+                        {% endif %}
+                        <span class="item-card-badge">
+                            {% if fav.status == '在售' %}
+                                <span class="item-tag tag-status-on">{{ fav.status }}</span>
+                            {% elif fav.status == '已约定' %}
+                                <span class="item-tag tag-status-reserved">{{ fav.status }}</span>
+                            {% else %}
+                                <span class="item-tag tag-status-done">{{ fav.status }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="item-card-body">
+                        <div class="item-card-title">{{ fav.title }}</div>
+                        <div class="item-card-price">₩{{ "{:,}".format(fav.price) }}</div>
+                        <div class="item-card-meta">
+                            <span>👤 {{ fav.seller_nickname }}</span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>你还没有收藏任何商品</p>
+            <p style="margin-top:16px;"><a href="{{ url_for('index') }}" class="btn btn-primary btn-sm">去发现好物</a></p>
+        </div>
+    {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: campus-secondhand
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python init_db.py && python seed_data.py
+    startCommand: gunicorn app:app
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true

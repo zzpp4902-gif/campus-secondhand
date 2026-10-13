@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}注册 - 중고캠퍼스{% endblock %}
+{% block content %}
+<div class="form-card" style="max-width:440px;">
+    <h1 class="page-title" style="text-align:center;margin-bottom:28px;">用户注册</h1>
+    <form method="POST" action="{{ url_for('register') }}" id="registerForm">
+        <div class="form-group">
+            <label for="username">用户名（3-20字符）</label>
+            <input type="text" id="username" name="username" required placeholder="请输入用户名">
+        </div>
+        <div class="form-group">
+            <label for="password">密码（至少6位）</label>
+            <input type="password" id="password" name="password" required placeholder="请输入密码">
+        </div>
+        <div class="form-group">
+            <label for="nickname">昵称</label>
+            <input type="text" id="nickname" name="nickname" required placeholder="请输入昵称">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px;padding:13px;">注册</button>
+    </form>
+    <p style="text-align:center;margin-top:20px;font-size:14px;color:var(--text-secondary);">
+        已有账号？<a href="{{ url_for('login') }}" style="color:var(--primary);font-weight:600;">直接登录</a>
+    </p>
+</div>
+{% endblock %}

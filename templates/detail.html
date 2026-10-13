@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} - 중고캠퍼스{% endblock %}
+{% block content %}
+<div class="detail-layout">
+    <div class="detail-gallery">
+        {% if item.image_base64 %}
+            <img src="{{ item.image_base64 }}" alt="{{ item.title }}" class="detail-image">
+        {% else %}
+            <div class="detail-image" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:16px;min-height:380px;">暂无图片</div>
+        {% endif %}
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-status-bar">
+            {% if item.status == '在售' %}
+                <span class="item-tag tag-status-on">{{ item.status }}</span>
+            {% elif item.status == '已约定' %}
+                <span class="item-tag tag-status-reserved">{{ item.status }}</span>
+            {% else %}
+                <span class="item-tag tag-status-done">{{ item.status }}</span>
+            {% endif %}
+            <span class="item-tag tag-condition">{{ item.condition }}</span>
+        </div>
+
+        <h1 class="detail-title">{{ item.title }}</h1>
+
+        <div class="detail-price-box">
+            <span style="font-size:14px;color:var(--text-secondary);font-weight:600;">售价</span>
+            <div class="detail-price">₩{{ "{:,}".format(item.price) }}</div>
+        </div>
+
+        <div class="detail-meta-box">
+            <div class="detail-meta-item">
+                <span>🏷️</span>
+                <span>分类：<strong>{{ item.category }}</strong></span>
+            </div>
+            <div class="detail-meta-item">
+                <span>👤</span>
+                <span>卖家：<strong>{{ item.seller_nickname }}</strong></span>
+            </div>
+            <div class="detail-meta-item">
+                <span>🏫</span>
+                <span>学校：<strong>{{ item.seller_school }}</strong></span>
+            </div>
+            <div class="detail-meta-item">
+                <span>⏱️</span>
+                <span>发布：<strong>{{ item.created_at|time_ago }}</strong></span>
+            </div>
+        </div>
+
+        <div class="detail-description">
+            {{ item.description or '卖家没有填写描述' }}
+        </div>
+
+        <div class="detail-actions">
+            {% if current_user.is_authenticated and current_user.id|string == item.seller_id|string %}
+                <a href="{{ url_for('edit_item', item_id=item.id) }}" class="btn btn-secondary">编辑商品</a>
+                <form method="POST" action="{{ url_for('delete_item', item_id=item.id) }}" style="display:inline;flex:1;" onsubmit="return confirm('确定要删除这个商品吗？');">
+                    <button type="submit" class="btn btn-danger" style="width:100%;">删除商品</button>
+                </form>
+            {% elif current_user.is_authenticated %}
+                <a href="{{ url_for('chat', user_id=item.seller_id, item_id=item.id) }}" class="btn btn-secondary">💬 私聊卖家</a>
+                <form method="POST" action="{{ url_for('favorite_item', item_id=item.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-secondary">
+                        {% if is_favorited %}♥ 已收藏{% else %}♡ 收藏{% endif %}
+                    </button>
+                </form>
+                {% if item.status == '在售' %}
+                    <button type="button" class="btn btn-primary" id="openApplyModal">意向申请</button>
+                {% else %}
+                    <button type="button" class="btn btn-primary" disabled>该商品已不可申请</button>
+                {% endif %}
+            {% else %}
+                <a href="{{ url_for('chat', user_id=item.seller_id, item_id=item.id) }}" class="btn btn-secondary">💬 私聊卖家</a>
+                <a href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}" class="btn btn-primary">登录后申请</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 意向申请弹窗 -->
+    <div class="modal-overlay" id="applyModal">
+        <div class="modal">
+            <h3>意向申请</h3>
+            <form method="POST" action="{{ url_for('apply_item', item_id=item.id) }}">
+                <div class="form-group">
+                    <label for="message">留言（选填）</label>
+                    <textarea id="message" name="message" placeholder="可以写下你想了解的问题或约定交易的时间地点" maxlength="500"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="closeModal">取消</button>
+                    <button type="submit" class="btn btn-primary">提交申请</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 留言板 -->
+    <div class="message-section">
+        <div class="message-section-header">
+            <h2>💬 商品留言（{{ messages|length }}）</h2>
+        </div>
+
+        {% if current_user.is_authenticated %}
+            <form method="POST" action="{{ url_for('add_message', item_id=item.id) }}" class="message-input">
+                <input type="text" name="content" placeholder="写下你的留言..." required maxlength="500">
+                <button type="submit" class="btn btn-primary btn-sm">发送</button>
+            </form>
+        {% else %}
+            <p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;padding:12px 16px;background:var(--bg-surface-subtle);border-radius:var(--radius-md);">
+                <a href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}" style="color:var(--primary);font-weight:600;">登录</a> 后可以留言
+            </p>
+        {% endif %}
+
+        {% if messages %}
+            <div class="message-list">
+                {% for msg in messages %}
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-author">👤 {{ msg.nickname }}（{{ msg.school }}）</span>
+                            <span class="message-time">{{ msg.created_at|time_ago }}</span>
+                        </div>
+                        <div class="message-content">{{ msg.content }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:14px;">
+                暂无留言，来抢沙发吧～
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
