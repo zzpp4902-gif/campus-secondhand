@@ -2,6 +2,14 @@
 
 在韩留学生校园二手物品交易平台，全中文界面，支持商品发布、浏览搜索、意向申请、留言沟通、线下当面交易。
 
+## 🌐 在线体验地址
+
+- **在线访问网址**：[https://campus-secondhand-eo84.onrender.com](https://campus-secondhand-eo84.onrender.com)
+- **GitHub 仓库**：[https://github.com/zzpp4902-gif/campus-secondhand](https://github.com/zzpp4902-gif/campus-secondhand)
+- **演示测试账号**：
+  - 卖家账号：`demo` / 密码：`demo123`（灵山大学，已有 30 件预设商品）
+  - 买家账号：`buyer` / 密码：`demo123`（高丽大学）
+
 ## 技术栈
 
 - **后端**：Python Flask + flask-login
