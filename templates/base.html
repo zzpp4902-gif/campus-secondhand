@@ -95,45 +95,12 @@
                     <div class="mega-divider"></div>
 
                     <div class="mega-column">
-                        <div class="mega-column-title" style="display:flex;align-items:center;justify-content:space-between;">
-                            <span>私聊消息</span>
-                            {% if unread_dm_count > 0 %}
-                                <span class="mega-unread-badge">{{ unread_dm_count }}</span>
-                            {% endif %}
+                        <div class="mega-column-title">快捷入口</div>
+                        <a href="{{ url_for('index') }}" class="mega-link">🏠 首页浏览</a>
+                        <div class="mega-tip">
+                            <strong>💡 小贴士</strong>
+                            <p>同校交易更安心，建议线下当面验货后再付款。</p>
                         </div>
-                        {% if current_user.is_authenticated %}
-                            <a href="{{ url_for('chat') }}" class="mega-link mega-link-primary">💬 进入私聊列表</a>
-                            {% if recent_chats %}
-                                <div class="mega-chat-list">
-                                    {% for chat_item in recent_chats[:3] %}
-                                        <a href="{{ url_for('chat', user_id=chat_item.partner_id) }}" class="mega-chat-item">
-                                            <span class="mega-chat-avatar">{{ chat_item.partner_nickname[0] }}</span>
-                                            <div class="mega-chat-meta">
-                                                <div class="mega-chat-name">
-                                                    <span>{{ chat_item.partner_nickname }}</span>
-                                                    {% if chat_item.unread_count > 0 %}
-                                                        <span class="mega-chat-dot"></span>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="mega-chat-msg">{{ chat_item.last_message }}</div>
-                                            </div>
-                                        </a>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="mega-chat-empty">
-                                    <p>暂无私聊消息</p>
-                                    <small>在商品详情页可直接私聊卖家</small>
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="mega-guest-hint">登录后可与买家和卖家在线私聊沟通</div>
-                            <a href="{{ url_for('login') }}" class="mega-link mega-link-primary">🔐 登录开启私聊</a>
-                            <div class="mega-tip">
-                                <strong>💬 私聊沟通</strong>
-                                <p>支持买卖双方一对一沟通细节、约定交易时间与地点。</p>
-                            </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>

@@ -43,8 +43,7 @@ campus-secondhand/
 └── templates/
     ├── base.html           # 基础模板：毛玻璃导航栏 +「全部功能」大型悬浮菜单（含私聊入口）+ 页脚
     ├── index.html          # 首页：Hero 搜索栏 + 快捷分类药丸 + Bento 商品卡片网格
-    ├── detail.html         # 商品详情页：大图展台 + 卖家卡片 + 意向申请弹窗 + 私聊卖家 + 公开留言板
-    ├── chat.html           # 私聊页面：左侧联系人列表（带未读徽章）+ 右侧对话气泡与关联商品横幅
+    ├── detail.html         # 商品详情页：大图展台 + 卖家卡片 + 意向申请弹窗 + 公开留言板
     ├── publish.html        # 发布商品页：拖拽/点击图片上传 Dropzone
     ├── edit_item.html      # 编辑商品页
     ├── profile.html        # 个人中心：用户 Banner + 胶囊 Tabs（我的发布/我的申请/我的收藏）
@@ -54,7 +53,7 @@ campus-secondhand/
 
 ---
 
-## 四、数据库设计（6张表）
+## 四、数据库设计（5张表）
 
 ### 1. `users`
 - `id` (SERIAL PRIMARY KEY)
@@ -100,16 +99,6 @@ campus-secondhand/
 - `created_at` (TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
 - `UNIQUE(user_id, item_id)`
 
-### 6. `direct_messages`（一对一私聊，最新增加）
-- `id` (SERIAL PRIMARY KEY)
-- `sender_id` (INTEGER REFERENCES users(id) ON DELETE CASCADE)
-- `receiver_id` (INTEGER REFERENCES users(id) ON DELETE CASCADE)
-- `item_id` (INTEGER REFERENCES items(id) ON DELETE SET NULL, 关联的讨论商品)
-- `content` (VARCHAR(1000) NOT NULL)
-- `is_read` (BOOLEAN DEFAULT FALSE)
-- `created_at` (TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
-- 索引：`idx_dm_users(sender_id, receiver_id)`, `idx_dm_created(created_at)`
-
 ---
 
 ## 五、核心业务逻辑
@@ -123,10 +112,8 @@ campus-secondhand/
 - 卖家同意约定时：`application.status = '已约定'`，同时 `item.status = '已约定'`。
 - 确认完成时：`application.status = '已完成'`，同时 `item.status = '已完成'`。
 
-### 2. 私聊业务逻辑
-- **详情页直达**：买家在详情页点击「💬 私聊卖家」，携带 `user_id` 与 `item_id` 进入 `/chat`，顶部自动显示该商品的讨论横幅。
-- **已读标记**：进入与某人的私聊窗口时，自动将对方发给当前用户的消息标记为 `is_read = TRUE`。
-- **全部功能 Mega Menu 联动**：全局注入 `recent_chats` 与 `unread_dm_count`，导航栏最右列直接展示最新私聊与红点未读提示。
+### 2. 留言与交流模式
+- 本项目采用**公开商品留言板**，买家在商品详情页留言，所有留言公开可见，**不做实时私信**。
 
 ### 3. 图片规范
 - 前端 Canvas 自动压缩至最长边 800px，JPEG 质量 0.7，输出 `data:image/jpeg;base64,...` 存入数据库。
@@ -168,7 +155,7 @@ python app.py
 | `GET/POST` | `/register` | 用户注册 |
 | `GET/POST` | `/login` | 用户登录 |
 | `GET` | `/logout` | 退出登录 |
-| `GET` | `/item/<id>` | 商品详情页（含私聊卖家按钮） |
+| `GET` | `/item/<id>` | 商品详情页 |
 | `GET/POST` | `/publish` | 发布二手商品 |
 | `GET/POST` | `/item/<id>/edit` | 编辑商品信息 |
 | `POST` | `/item/<id>/delete` | 删除商品 |
@@ -178,8 +165,6 @@ python app.py
 | `POST` | `/item/<id>/favorite` | 收藏 / 取消收藏 |
 | `POST` | `/item/<id>/message` | 发表公开留言 |
 | `GET` | `/profile` | 个人中心（`?tab=published/applied/favorites`） |
-| `GET` | `/chat` | **私聊主页**（支持 `?user_id=&item_id=`） |
-| `POST` | `/chat/send` | **发送私聊消息** |
 
 ---
 

@@ -59,7 +59,6 @@
                     <button type="submit" class="btn btn-danger" style="width:100%;">删除商品</button>
                 </form>
             {% elif current_user.is_authenticated %}
-                <a href="{{ url_for('chat', user_id=item.seller_id, item_id=item.id) }}" class="btn btn-secondary">💬 私聊卖家</a>
                 <form method="POST" action="{{ url_for('favorite_item', item_id=item.id) }}" style="display:inline;">
                     <button type="submit" class="btn btn-secondary">
                         {% if is_favorited %}♥ 已收藏{% else %}♡ 收藏{% endif %}
@@ -71,7 +70,6 @@
                     <button type="button" class="btn btn-primary" disabled>该商品已不可申请</button>
                 {% endif %}
             {% else %}
-                <a href="{{ url_for('chat', user_id=item.seller_id, item_id=item.id) }}" class="btn btn-secondary">💬 私聊卖家</a>
                 <a href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}" class="btn btn-primary">登录后申请</a>
             {% endif %}
         </div>

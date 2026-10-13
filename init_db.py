@@ -54,18 +54,6 @@ CREATE TABLE IF NOT EXISTS favorites (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, item_id)
 );
-
-CREATE TABLE IF NOT EXISTS direct_messages (
-    id SERIAL PRIMARY KEY,
-    sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
-    content VARCHAR(1000) NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_dm_users ON direct_messages (sender_id, receiver_id);
-CREATE INDEX IF NOT EXISTS idx_dm_created ON direct_messages (created_at);
 """
 
 
@@ -80,10 +68,11 @@ def main():
         cur.execute(CREATE_TABLES)
         cur.close()
         conn.close()
-        print('数据库建表完成：users, items, applications, messages, favorites, direct_messages')
+        print('数据库建表完成：users, items, applications, messages, favorites')
     except Exception as e:
         print(f'建表失败：{e}')
 
 
 if __name__ == '__main__':
     main()
+
