@@ -50,6 +50,22 @@ def execute_db(query, args=()):
     conn.close()
 
 
+def execute_transaction(operations):
+    """Executes multiple queries in a single atomic ACID transaction with rollback on failure."""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        for query, args in operations:
+            cur.execute(query, args)
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+
 class User(UserMixin):
     def __init__(self, user_dict):
         self.id = str(user_dict['id'])
@@ -343,8 +359,11 @@ def accept_application(app_id):
     if application['status'] != '申请中':
         flash('该申请状态不可操作', 'error')
         return redirect(url_for('profile'))
-    execute_db('UPDATE applications SET status=%s WHERE id=%s', ('已约定', app_id))
-    execute_db('UPDATE items SET status=%s WHERE id=%s', ('已约定', application['item_id']))
+    # Atomic transaction for application status and item visibility
+    execute_transaction([
+        ('UPDATE applications SET status=%s WHERE id=%s', ('已约定', app_id)),
+        ('UPDATE items SET status=%s WHERE id=%s', ('已约定', application['item_id']))
+    ])
     flash('已同意约定', 'success')
     return redirect(url_for('profile'))
 
@@ -362,8 +381,11 @@ def complete_application(app_id):
     if application['status'] != '已约定':
         flash('该申请状态不可操作', 'error')
         return redirect(url_for('profile'))
-    execute_db('UPDATE applications SET status=%s WHERE id=%s', ('已完成', app_id))
-    execute_db('UPDATE items SET status=%s WHERE id=%s', ('已完成', application['item_id']))
+    # Atomic transaction for transaction completion
+    execute_transaction([
+        ('UPDATE applications SET status=%s WHERE id=%s', ('已完成', app_id)),
+        ('UPDATE items SET status=%s WHERE id=%s', ('已完成', application['item_id']))
+    ])
     flash('交易已完成', 'success')
     return redirect(url_for('profile'))
 
