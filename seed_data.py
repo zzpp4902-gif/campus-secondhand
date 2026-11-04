@@ -1,5 +1,9 @@
 import os
 import psycopg2
+import urllib.request
+import io
+import base64
+from PIL import Image
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
 
@@ -10,8 +14,55 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '')
 PLACEHOLDER_IMAGE = ('data:image/jpeg;base64,'
     '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a'
     'HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIy'
-    'MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QA'
+    'MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QA'
     'FAABAAAAAAAAAAAAAAAAAAAACf/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8A/9k=')
+
+SAMPLE_PHOTO_IDS = [
+    'photo-1544716278-ca5e3f4abd8c', # 1. 高等数学教材
+    'photo-1515879218367-8466d910aaa4', # 2. Python编程
+    'photo-1456513080510-7bf3a84b82f8', # 3. 线性代数
+    'photo-1457369804613-52c61a468e7d', # 4. 大学英语四级
+    'photo-1526374965328-7f61d4dc18c5', # 5. 数据结构与算法
+    'photo-1585771724684-38269d6639fd', # 6. 小米空气净化器
+    'photo-1615663245857-ac93bb7c39e7', # 7. 罗技无线鼠标
+    'photo-1527443224154-c4a3942d3acf', # 8. 三星27寸显示器
+    'photo-1575311373937-040b8e1fd5b6', # 9. 小米手环7
+    'photo-1506880018603-83d5b814b5a6', # 10. Kindle Paperwhite
+    'photo-1544233726-9f1d2b27be8b', # 11. 电饭煲（3L）
+    'photo-1594212699903-ec8a3eca50f5', # 12. 电热水壶
+    'photo-1507473885765-e6ed057f782c', # 13. 台灯（护眼LED）
+    'photo-1522337360788-8b13dee7a37e', # 14. 吹风机
+    'photo-1576678927484-cc907957088c', # 15. 体重秤
+    'photo-1590736969955-71cc94801759', # 16. 收纳箱（大号3个）
+    'photo-1584132967334-10e028bd69f7', # 17. 单人床垫
+    'photo-1518455027359-f3f8164ba6bd', # 18. 书桌（简易组装）
+    'photo-1592078615290-033ee584e267', # 19. 椅子（人体工学）
+    'photo-1594980596870-8aa52a78d8cd', # 20. 书架（五层）
+    'photo-1571175443880-49e1d25b2bc5', # 21. 小冰箱（50L）
+    'photo-1542291026-7eec264c27ff', # 22. Nike运动鞋（260mm）
+    'photo-1548883354-7622d03aca27', # 23. 羽绒服（男L）
+    'photo-1553062407-98eeb64c6a62', # 24. 背包（电脑包）
+    'photo-1608256246200-53e635b5b65f', # 25. 围巾（羊毛）
+    'photo-1588850561407-ed78c282e89b', # 26. 棒球帽
+    'photo-1601925260368-ae2f83cf8b7f', # 27. 瑜伽垫
+    'photo-1626224583764-f87db24ac4ea', # 28. 羽毛球拍（两支）
+    'photo-1510915361894-db8b60106cb1', # 29. 吉他（民谣）
+    'photo-1485965120184-e220f721d03e', # 30. 自行车（通勤）
+]
+
+def fetch_image_base64(photo_id):
+    url = f'https://images.unsplash.com/{photo_id}?w=400&h=300&fit=crop&q=75'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            raw = resp.read()
+            im = Image.open(io.BytesIO(raw))
+            buf = io.BytesIO()
+            im.convert('RGB').save(buf, format='JPEG', quality=75)
+            return 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+    except Exception as e:
+        print(f'图片获取失败 ({photo_id}): {e}')
+        return PLACEHOLDER_IMAGE
 
 DEMO_USER = ('demo', generate_password_hash('demo123'), '演示账号', '灵山大学')
 BUYER_USER = ('buyer', generate_password_hash('demo123'), '张同学', '高丽大学')
@@ -49,7 +100,6 @@ SAMPLE_ITEMS = [
     ('自行车（通勤）', '其他', 80000, '八成新', '26寸，6速变速，刹车灵敏，需自提'),
 ]
 
-
 def main():
     if not DATABASE_URL:
         print('错误：未配置 DATABASE_URL，请在 .env 文件中填写数据库连接串')
@@ -60,10 +110,10 @@ def main():
         cur = conn.cursor()
 
         cur.execute('SELECT id FROM users WHERE username = %s', (DEMO_USER[0],))
-        if cur.fetchone():
+        row = cur.fetchone()
+        if row:
             print('demo 用户已存在，跳过创建')
-            cur.execute('SELECT id FROM users WHERE username = %s', (DEMO_USER[0],))
-            seller_id = cur.fetchone()[0]
+            seller_id = row[0]
         else:
             cur.execute('INSERT INTO users (username, password_hash, nickname, school) VALUES (%s, %s, %s, %s) RETURNING id',
                         DEMO_USER)
@@ -78,20 +128,30 @@ def main():
         cur.execute('SELECT COUNT(*) FROM items WHERE seller_id = %s', (seller_id,))
         count = cur.fetchone()[0]
         if count > 0:
-            print(f'已存在 {count} 条商品数据，跳过插入')
+            print(f'已存在 {count} 条商品数据，正在检查并补充高清实拍图片...')
+            cur.execute('SELECT id, title, length(image_base64) FROM items WHERE seller_id = %s ORDER BY id', (seller_id,))
+            rows = cur.fetchall()
+            for idx, (i_id, i_title, img_len) in enumerate(rows):
+                if not img_len or img_len < 500:
+                    pid = SAMPLE_PHOTO_IDS[idx % len(SAMPLE_PHOTO_IDS)]
+                    b64 = fetch_image_base64(pid)
+                    cur.execute('UPDATE items SET image_base64 = %s WHERE id = %s', (b64, i_id))
+                    print(f'已为商品 [{i_title}] 更新高清实拍图')
+            print('商品图片同步检查完成')
         else:
-            for title, category, price, condition, description in SAMPLE_ITEMS:
+            for idx, (title, category, price, condition, description) in enumerate(SAMPLE_ITEMS):
+                pid = SAMPLE_PHOTO_IDS[idx % len(SAMPLE_PHOTO_IDS)]
+                img_b64 = fetch_image_base64(pid)
                 cur.execute(
                     'INSERT INTO items (seller_id, title, category, price, condition, description, image_base64) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                    (seller_id, title, category, price, condition, description, PLACEHOLDER_IMAGE))
-            print(f'已插入 {len(SAMPLE_ITEMS)} 条示例商品')
+                    (seller_id, title, category, price, condition, description, img_b64))
+            print(f'已插入 {len(SAMPLE_ITEMS)} 条示例商品（附带真实实拍图）')
 
         cur.close()
         conn.close()
         print('模拟数据导入完成')
     except Exception as e:
         print(f'数据导入失败：{e}')
-
 
 if __name__ == '__main__':
     main()
