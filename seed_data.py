@@ -3,7 +3,10 @@ import psycopg2
 import urllib.request
 import io
 import base64
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
 
