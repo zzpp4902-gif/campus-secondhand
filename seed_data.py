@@ -50,6 +50,23 @@ SAMPLE_PHOTO_IDS = [
     'photo-1485965120184-e220f721d03e', # 30. 自行车（通勤）
 ]
 
+SAMPLE_IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'sample_images')
+
+def load_product_image_base64(item_index):
+    """优先从本地 sample_images 目录加载真实商品实拍照片"""
+    local_path = os.path.join(SAMPLE_IMAGES_DIR, f'item_{item_index}.jpg')
+    if os.path.exists(local_path):
+        try:
+            with open(local_path, 'rb') as f:
+                raw = f.read()
+            return 'data:image/jpeg;base64,' + base64.b64encode(raw).decode('ascii')
+        except Exception as e:
+            print(f'本地图片读取失败 ({local_path}): {e}')
+    
+    # 备用回退逻辑
+    pid = SAMPLE_PHOTO_IDS[(item_index - 1) % len(SAMPLE_PHOTO_IDS)]
+    return fetch_image_base64(pid)
+
 def fetch_image_base64(photo_id):
     url = f'https://images.unsplash.com/{photo_id}?w=400&h=300&fit=crop&q=75'
     try:
@@ -128,20 +145,17 @@ def main():
         cur.execute('SELECT COUNT(*) FROM items WHERE seller_id = %s', (seller_id,))
         count = cur.fetchone()[0]
         if count > 0:
-            print(f'已存在 {count} 条商品数据，正在检查并补充高清实拍图片...')
+            print(f'已存在 {count} 条商品数据，正在检查并补充高清真实实拍图片...')
             cur.execute('SELECT id, title, length(image_base64) FROM items WHERE seller_id = %s ORDER BY id', (seller_id,))
             rows = cur.fetchall()
             for idx, (i_id, i_title, img_len) in enumerate(rows):
-                if not img_len or img_len < 500:
-                    pid = SAMPLE_PHOTO_IDS[idx % len(SAMPLE_PHOTO_IDS)]
-                    b64 = fetch_image_base64(pid)
-                    cur.execute('UPDATE items SET image_base64 = %s WHERE id = %s', (b64, i_id))
-                    print(f'已为商品 [{i_title}] 更新高清实拍图')
-            print('商品图片同步检查完成')
+                b64 = load_product_image_base64(idx + 1)
+                cur.execute('UPDATE items SET image_base64 = %s WHERE id = %s', (b64, i_id))
+                print(f'已为商品 [{i_title}] 更新真实实拍图 (ID: {i_id})')
+            print('商品真实实拍图同步更新完成')
         else:
             for idx, (title, category, price, condition, description) in enumerate(SAMPLE_ITEMS):
-                pid = SAMPLE_PHOTO_IDS[idx % len(SAMPLE_PHOTO_IDS)]
-                img_b64 = fetch_image_base64(pid)
+                img_b64 = load_product_image_base64(idx + 1)
                 cur.execute(
                     'INSERT INTO items (seller_id, title, category, price, condition, description, image_base64) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                     (seller_id, title, category, price, condition, description, img_b64))

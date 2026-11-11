@@ -522,6 +522,12 @@ img {
     border: 1px solid #FECACA;
 }
 
+.flash.warning {
+    background: #FFFBEB;
+    color: #B45309;
+    border: 1px solid #FDE68A;
+}
+
 @keyframes flashSlideIn {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }

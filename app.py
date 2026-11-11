@@ -1,4 +1,5 @@
 import os
+import uuid
 import re
 from datetime import datetime
 from functools import wraps
@@ -72,6 +73,26 @@ class User(UserMixin):
         self.username = user_dict['username']
         self.nickname = user_dict['nickname']
         self.school = user_dict['school']
+        self.session_token = user_dict.get('session_token')
+
+
+
+@app.before_request
+def check_single_session():
+    # 静态资源、健康检查接口跳过校验
+    if request.endpoint in ('static', 'healthz') or request.path.startswith('/static'):
+        return None
+
+    if current_user.is_authenticated:
+        client_token = session.get('session_token')
+        user_db = query_db('SELECT session_token FROM users WHERE id = %s', (current_user.id,), one=True)
+        if not user_db or not user_db.get('session_token') or user_db['session_token'] != client_token:
+            # 顶号踢出逻辑
+            logout_user()
+            session.clear()
+            if request.endpoint not in ('login', 'register'):
+                flash('该账号已在其他设备或窗口登录，当前会话已下线。', 'warning')
+                return redirect(url_for('login'))
 
 
 @login_manager.user_loader
@@ -165,6 +186,11 @@ def login():
         password = request.form.get('password', '')
         user = query_db('SELECT * FROM users WHERE username = %s', (username,), one=True)
         if user and check_password_hash(user['password_hash'], password):
+            # 单设备登录（顶号机制）：每次登录生成新的 session_token 写入数据库
+            token = str(uuid.uuid4())
+            execute_db('UPDATE users SET session_token = %s WHERE id = %s', (token, user['id']))
+            user['session_token'] = token
+            session['session_token'] = token
             login_user(User(user))
             next_page = request.args.get('next')
             flash('登录成功', 'success')
@@ -175,9 +201,14 @@ def login():
 
 
 @app.route('/logout')
-@login_required
 def logout():
-    logout_user()
+    if current_user.is_authenticated:
+        try:
+            execute_db('UPDATE users SET session_token = NULL WHERE id = %s', (current_user.id,))
+        except Exception:
+            pass
+        logout_user()
+    session.clear()
     flash('已退出登录', 'success')
     return redirect(url_for('index'))
 

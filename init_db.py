@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     nickname VARCHAR(50) NOT NULL,
     school VARCHAR(100) NOT NULL,
+    session_token VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -66,6 +67,7 @@ def main():
         conn.autocommit = True
         cur = conn.cursor()
         cur.execute(CREATE_TABLES)
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(100);")
         cur.close()
         conn.close()
         print('数据库建表完成：users, items, applications, messages, favorites')
