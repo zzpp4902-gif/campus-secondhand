@@ -81,6 +81,12 @@
                                 </div>
                             </div>
                             <a href="{{ url_for('publish') }}" class="mega-link mega-link-primary">📢 发布物品</a>
+                            <a href="{{ url_for('chat_view') }}" class="mega-link">
+                                💬 我的私聊
+                                {% if unread_chat_count > 0 %}
+                                    <span class="badge-unread">{{ unread_chat_count }}</span>
+                                {% endif %}
+                            </a>
                             <a href="{{ url_for('profile', tab='published') }}" class="mega-link">📋 我的发布</a>
                             <a href="{{ url_for('profile', tab='applied') }}" class="mega-link">📨 我的申请</a>
                             <a href="{{ url_for('profile', tab='favorites') }}" class="mega-link">❤️ 我的收藏</a>
@@ -105,8 +111,14 @@
                 </div>
             </div>
 
-            <!-- 右上角显眼按钮：未登录显示登录，已登录显示发布 -->
+            <!-- 右上角显眼按钮：未登录显示登录，已登录显示发布与私聊 -->
             {% if current_user.is_authenticated %}
+                <a href="{{ url_for('chat_view') }}" class="nav-chat-btn" title="我的私信">
+                    💬
+                    {% if unread_chat_count > 0 %}
+                        <span class="nav-unread-badge">{{ unread_chat_count }}</span>
+                    {% endif %}
+                </a>
                 <a href="{{ url_for('publish') }}" class="nav-publish-btn">+ 发布物品</a>
             {% else %}
                 <a href="{{ url_for('login') }}" class="nav-publish-btn">🔐 登录</a>

@@ -55,6 +55,18 @@ CREATE TABLE IF NOT EXISTS favorites (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, item_id)
 );
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id SERIAL PRIMARY KEY,
+    sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+    content TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_chat_sender_receiver ON chat_messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
 """
 
 
@@ -70,7 +82,7 @@ def main():
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(100);")
         cur.close()
         conn.close()
-        print('数据库建表完成：users, items, applications, messages, favorites')
+        print('数据库建表完成：users, items, applications, messages, favorites, chat_messages')
     except Exception as e:
         print(f'建表失败：{e}')
 

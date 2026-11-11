@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}私聊消息 - 중고캠퍼스{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+    <!-- 左侧会话联系人列表 -->
+    <div class="chat-sidebar">
+        <div class="chat-sidebar-header">
+            <h3>💬 私信列表</h3>
+            <span class="chat-count-badge">{{ conversations|length }} 个对话</span>
+        </div>
+
+        <div class="chat-contact-list">
+            {% if conversations %}
+                {% for conv in conversations %}
+                    <a href="{{ url_for('chat_view', user_id=conv.user_id) }}" 
+                       class="chat-contact-item {% if selected_user and selected_user.id|string == conv.user_id|string %}active{% endif %}">
+                        <div class="contact-avatar">
+                            {{ conv.nickname[0] }}
+                        </div>
+                        <div class="contact-info">
+                            <div class="contact-top">
+                                <span class="contact-name">{{ conv.nickname }}</span>
+                                {% if conv.last_time %}
+                                    <span class="contact-time">{{ conv.last_time|time_ago }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="contact-school">{{ conv.school }}</div>
+                            <div class="contact-bottom">
+                                <span class="contact-preview">{{ conv.last_message or '暂无消息' }}</span>
+                                {% if conv.unread_count and conv.unread_count > 0 %}
+                                    <span class="contact-unread">{{ conv.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <div class="chat-empty-sidebar">
+                    <p>暂无联系人</p>
+                    <small>在商品页面点击“私聊卖家”可发起对话</small>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 右侧主对话区 -->
+    <div class="chat-main">
+        {% if selected_user %}
+            <!-- 对话顶栏 -->
+            <div class="chat-header">
+                <div class="chat-header-user">
+                    <div class="header-avatar">{{ selected_user.nickname[0] }}</div>
+                    <div>
+                        <div class="header-name">{{ selected_user.nickname }}</div>
+                        <div class="header-school">🏫 {{ selected_user.school }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 关联商品卡片展示 -->
+            {% if current_item %}
+                <div class="chat-item-banner">
+                    {% if current_item.image_base64 %}
+                        <img src="{{ current_item.image_base64 }}" alt="{{ current_item.title }}" class="chat-item-thumb">
+                    {% else %}
+                        <div class="chat-item-thumb chat-thumb-placeholder">🛍️</div>
+                    {% endif %}
+                    <div class="chat-item-info">
+                        <div class="chat-item-title">{{ current_item.title }}</div>
+                        <div class="chat-item-price">₩{{ "{:,}".format(current_item.price) }} · <span class="chat-item-status">{{ current_item.status }}</span></div>
+                    </div>
+                    <a href="{{ url_for('detail', item_id=current_item.id) }}" target="_blank" class="chat-item-link">查看商品 ↗</a>
+                </div>
+            {% endif %}
+
+            <!-- 历史聊天消息流 -->
+            <div class="chat-messages-container" id="chatMessages">
+                {% if chat_history %}
+                    {% for msg in chat_history %}
+                        {% set is_me = (msg.sender_id|string == current_user.id|string) %}
+                        <div class="message-row {% if is_me %}me{% else %}other{% endif %}" data-msg-id="{{ msg.id }}">
+                            {% if not is_me %}
+                                <div class="msg-avatar">{{ msg.sender_nickname[0] if msg.sender_nickname else selected_user.nickname[0] }}</div>
+                            {% endif %}
+                            <div class="msg-bubble-wrap">
+                                <div class="msg-bubble">
+                                    {{ msg.content }}
+                                </div>
+                                <div class="msg-time">{{ msg.created_at.strftime('%H:%M') if msg.created_at else '' }}</div>
+                            </div>
+                            {% if is_me %}
+                                <div class="msg-avatar msg-avatar-me">{{ current_user.nickname[0] }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="chat-history-empty" id="historyEmpty">
+                        <div class="empty-icon">🤝</div>
+                        <p>与 <strong>{{ selected_user.nickname }}</strong> 开始交流吧！</p>
+                        <small>倡导校园友善交流，建议当面验货交易。</small>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- 底部输入框与发送区 -->
+            <div class="chat-input-box">
+                <form id="chatForm" class="chat-form">
+                    <input type="hidden" id="receiverId" name="receiver_id" value="{{ selected_user.id }}">
+                    {% if current_item %}
+                        <input type="hidden" id="itemId" name="item_id" value="{{ current_item.id }}">
+                    {% endif %}
+                    <textarea id="chatInput" name="content" rows="2" placeholder="发条消息吧...（按 Enter 发送，Shift+Enter 换行）" required></textarea>
+                    <button type="submit" id="sendBtn" class="btn btn-primary btn-chat-send">
+                        <span>发送</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    </button>
+                </form>
+            </div>
+
+        {% else %}
+            <!-- 未选定联系人时的欢迎空状态 -->
+            <div class="chat-no-selection">
+                <div class="no-selection-card">
+                    <div class="no-selection-icon">💬</div>
+                    <h2>校园二手私聊中心</h2>
+                    <p>在左侧选择一个联系人，或者浏览商品详情点击“私聊卖家”发起对话。</p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary" style="margin-top:16px;">浏览在售商品</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatContainer = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const receiverId = document.getElementById('receiverId');
+    const itemId = document.getElementById('itemId');
+    const historyEmpty = document.getElementById('historyEmpty');
+
+    if (!chatContainer || !chatForm) return;
+
+    // 平滑滚动到底部
+    function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    scrollToBottom();
+
+    // 回车发送（Shift+Enter 换行）
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    });
+
+    // 获取当前最大的 msg-id 用于增量轮询
+    function getMaxMsgId() {
+        const rows = chatContainer.querySelectorAll('.message-row[data-msg-id]');
+        let maxId = 0;
+        rows.forEach(r => {
+            const id = parseInt(r.getAttribute('data-msg-id'), 10);
+            if (id > maxId) maxId = id;
+        });
+        return maxId;
+    }
+
+    // 格式化气泡追加
+    function appendMessage(msg, isMe) {
+        if (historyEmpty) {
+            historyEmpty.remove();
+        }
+        const row = document.createElement('div');
+        row.className = `message-row ${isMe ? 'me' : 'other'}`;
+        row.setAttribute('data-msg-id', msg.id);
+
+        const myInitial = "{{ current_user.nickname[0] }}";
+        const otherInitial = "{{ selected_user.nickname[0] if selected_user else '友' }}";
+
+        let html = '';
+        if (!isMe) {
+            html += `<div class="msg-avatar">${escapeHtml(msg.nickname ? msg.nickname[0] : otherInitial)}</div>`;
+        }
+        html += `
+            <div class="msg-bubble-wrap">
+                <div class="msg-bubble">${escapeHtml(msg.content)}</div>
+                <div class="msg-time">${escapeHtml(msg.time || '')}</div>
+            </div>
+        `;
+        if (isMe) {
+            html += `<div class="msg-avatar msg-avatar-me">${escapeHtml(myInitial)}</div>`;
+        }
+        row.innerHTML = html;
+        chatContainer.appendChild(row);
+        scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.innerText = text;
+        return div.innerHTML;
+    }
+
+    // 表单提交发送消息
+    chatForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const content = chatInput.value.trim();
+        if (!content) return;
+
+        const formData = new FormData();
+        formData.append('receiver_id', receiverId.value);
+        formData.append('content', content);
+        if (itemId) formData.append('item_id', itemId.value);
+
+        chatInput.value = '';
+
+        try {
+            const resp = await fetch("{{ url_for('api_send_chat') }}", {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+            if (data.status === 'success') {
+                appendMessage(data.message, true);
+            } else {
+                alert(data.message || '发送失败');
+            }
+        } catch (err) {
+            console.error('发送出错:', err);
+        }
+    });
+
+    // 定时轮询拉取对方发送的新消息（每 3 秒）
+    if (receiverId) {
+        setInterval(async function() {
+            const lastId = getMaxMsgId();
+            try {
+                const resp = await fetch(`{{ url_for('api_get_messages') }}?other_id=${receiverId.value}&after_id=${lastId}`);
+                const data = await resp.json();
+                if (data.status === 'success' && data.messages && data.messages.length > 0) {
+                    data.messages.forEach(m => {
+                        // 避免重复追加自己刚发的消息
+                        const exists = chatContainer.querySelector(`.message-row[data-msg-id="${m.id}"]`);
+                        if (!exists) {
+                            appendMessage(m, m.is_me);
+                        }
+                    });
+                }
+            } catch (e) {
+                // 静默忽略网络小波动
+            }
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

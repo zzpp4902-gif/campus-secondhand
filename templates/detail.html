@@ -64,12 +64,18 @@
                         {% if is_favorited %}♥ 已收藏{% else %}♡ 收藏{% endif %}
                     </button>
                 </form>
+                <a href="{{ url_for('chat_view', user_id=item.seller_id, item_id=item.id) }}" class="btn btn-chat">
+                    💬 私聊卖家
+                </a>
                 {% if item.status == '在售' %}
                     <button type="button" class="btn btn-primary" id="openApplyModal">意向申请</button>
                 {% else %}
                     <button type="button" class="btn btn-primary" disabled>该商品已不可申请</button>
                 {% endif %}
             {% else %}
+                <a href="{{ url_for('login', next=url_for('chat_view', user_id=item.seller_id, item_id=item.id)) }}" class="btn btn-chat">
+                    💬 私聊卖家
+                </a>
                 <a href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}" class="btn btn-primary">登录后申请</a>
             {% endif %}
         </div>

@@ -450,6 +450,176 @@ def profile():
     return redirect(url_for('profile'))
 
 
+
+
+@app.context_processor
+def inject_unread_chat_count():
+    if current_user.is_authenticated:
+        try:
+            res = query_db('SELECT COUNT(*) as cnt FROM chat_messages WHERE receiver_id = %s AND is_read = FALSE', (current_user.id,), one=True)
+            return {'unread_chat_count': res['cnt'] if res else 0}
+        except Exception:
+            return {'unread_chat_count': 0}
+    return {'unread_chat_count': 0}
+
+
+@app.route('/chat')
+@login_required
+def chat_view():
+    target_user_id = request.args.get('user_id')
+    item_id = request.args.get('item_id')
+
+    conv_sql = """
+        WITH latest_msgs AS (
+            SELECT 
+                CASE WHEN sender_id = %s THEN receiver_id ELSE sender_id END AS other_user_id,
+                content,
+                created_at,
+                id,
+                ROW_NUMBER() OVER (
+                    PARTITION BY CASE WHEN sender_id = %s THEN receiver_id ELSE sender_id END 
+                    ORDER BY created_at DESC, id DESC
+                ) as rn
+            FROM chat_messages
+            WHERE sender_id = %s OR receiver_id = %s
+        ),
+        unread_counts AS (
+            SELECT sender_id AS other_user_id, COUNT(*) AS unread_cnt
+            FROM chat_messages
+            WHERE receiver_id = %s AND is_read = FALSE
+            GROUP BY sender_id
+        )
+        SELECT 
+            u.id AS user_id,
+            u.nickname,
+            u.school,
+            lm.content AS last_message,
+            lm.created_at AS last_time,
+            COALESCE(uc.unread_cnt, 0) AS unread_count
+        FROM latest_msgs lm
+        JOIN users u ON lm.other_user_id = u.id
+        LEFT JOIN unread_counts uc ON u.id = uc.other_user_id
+        WHERE lm.rn = 1
+        ORDER BY lm.created_at DESC;
+    """
+    conversations = query_db(conv_sql, (current_user.id, current_user.id, current_user.id, current_user.id, current_user.id)) or []
+
+    selected_user = None
+    if target_user_id:
+        if str(target_user_id) == str(current_user.id):
+            flash('不能与自己发起私聊', 'warning')
+            return redirect(url_for('chat_view'))
+        selected_user = query_db('SELECT id, nickname, school FROM users WHERE id = %s', (target_user_id,), one=True)
+        if selected_user and not any(str(c['user_id']) == str(target_user_id) for c in conversations):
+            conversations.insert(0, {
+                'user_id': selected_user['id'],
+                'nickname': selected_user['nickname'],
+                'school': selected_user['school'],
+                'last_message': '开启新的私聊...',
+                'last_time': None,
+                'unread_count': 0
+            })
+    elif conversations:
+        selected_user = query_db('SELECT id, nickname, school FROM users WHERE id = %s', (conversations[0]['user_id'],), one=True)
+
+    current_item = None
+    if item_id:
+        current_item = query_db('SELECT id, title, price, status, image_base64 FROM items WHERE id = %s', (item_id,), one=True)
+
+    chat_history = []
+    if selected_user:
+        execute_db('UPDATE chat_messages SET is_read = TRUE WHERE sender_id = %s AND receiver_id = %s AND is_read = FALSE', (selected_user['id'], current_user.id))
+        history_sql = """
+            SELECT cm.*, u.nickname as sender_nickname
+            FROM chat_messages cm
+            JOIN users u ON cm.sender_id = u.id
+            WHERE (cm.sender_id = %s AND cm.receiver_id = %s)
+               OR (cm.sender_id = %s AND cm.receiver_id = %s)
+            ORDER BY cm.created_at ASC, cm.id ASC
+        """
+        chat_history = query_db(history_sql, (current_user.id, selected_user['id'], selected_user['id'], current_user.id)) or []
+        
+        if not current_item and chat_history:
+            for msg in reversed(chat_history):
+                if msg.get('item_id'):
+                    current_item = query_db('SELECT id, title, price, status, image_base64 FROM items WHERE id = %s', (msg['item_id'],), one=True)
+                    if current_item:
+                        break
+
+    return render_template('chat.html',
+                           conversations=conversations,
+                           selected_user=selected_user,
+                           chat_history=chat_history,
+                           current_item=current_item)
+
+
+@app.route('/api/chat/send', methods=['POST'])
+@login_required
+def api_send_chat():
+    receiver_id = request.form.get('receiver_id')
+    item_id = request.form.get('item_id') or None
+    content = request.form.get('content', '').strip()
+
+    if not receiver_id or not content:
+        return {'status': 'error', 'message': '接收者或消息内容不能为空'}, 400
+    if str(receiver_id) == str(current_user.id):
+        return {'status': 'error', 'message': '不能给自己发消息'}, 400
+    if len(content) > 1000:
+        return {'status': 'error', 'message': '消息长度不能超过1000字'}, 400
+
+    execute_db(
+        'INSERT INTO chat_messages (sender_id, receiver_id, item_id, content) VALUES (%s, %s, %s, %s)',
+        (current_user.id, receiver_id, item_id, content)
+    )
+    msg = query_db(
+        'SELECT id, sender_id, receiver_id, content, created_at FROM chat_messages WHERE sender_id = %s ORDER BY id DESC LIMIT 1',
+        (current_user.id,), one=True
+    )
+    return {
+        'status': 'success',
+        'message': {
+            'id': msg['id'],
+            'sender_id': msg['sender_id'],
+            'content': msg['content'],
+            'time': msg['created_at'].strftime('%H:%M') if msg['created_at'] else ''
+        }
+    }
+
+
+@app.route('/api/chat/messages')
+@login_required
+def api_get_messages():
+    other_id = request.args.get('other_id')
+    after_id = int(request.args.get('after_id', 0))
+    if not other_id:
+        return {'status': 'error', 'messages': []}, 400
+
+    sql = """
+        SELECT cm.id, cm.sender_id, cm.receiver_id, cm.content, cm.created_at, u.nickname as sender_nickname
+        FROM chat_messages cm
+        JOIN users u ON cm.sender_id = u.id
+        WHERE ((cm.sender_id = %s AND cm.receiver_id = %s)
+            OR (cm.sender_id = %s AND cm.receiver_id = %s))
+          AND cm.id > %s
+        ORDER BY cm.created_at ASC, cm.id ASC
+    """
+    new_msgs = query_db(sql, (current_user.id, other_id, other_id, current_user.id, after_id)) or []
+    if new_msgs:
+        execute_db('UPDATE chat_messages SET is_read = TRUE WHERE sender_id = %s AND receiver_id = %s AND is_read = FALSE', (other_id, current_user.id))
+
+    res = []
+    for m in new_msgs:
+        res.append({
+            'id': m['id'],
+            'sender_id': m['sender_id'],
+            'is_me': str(m['sender_id']) == str(current_user.id),
+            'content': m['content'],
+            'nickname': m['sender_nickname'],
+            'time': m['created_at'].strftime('%H:%M') if m['created_at'] else ''
+        })
+    return {'status': 'success', 'messages': res}
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
