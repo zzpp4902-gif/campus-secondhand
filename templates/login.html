@@ -3,7 +3,7 @@
 {% block content %}
 <div class="form-card" style="max-width:440px;">
     <h1 class="page-title" style="text-align:center;margin-bottom:28px;">用户登录</h1>
-    <form method="POST" action="{{ url_for('login') }}">
+    <form method="POST" action="{{ url_for('login', next=next_page) }}">
         <div class="form-group">
             <label for="username">用户名</label>
             <input type="text" id="username" name="username" required placeholder="请输入用户名">
@@ -18,9 +18,16 @@
         还没有账号？<a href="{{ url_for('register') }}" style="color:var(--primary);font-weight:600;">立即注册</a>
     </p>
     <div style="margin-top:20px;padding:12px;background:var(--bg-surface-subtle);border-radius:var(--radius-lg);text-align:center;border:1px dashed var(--border-subtle);">
+        {% if show_demo_buyer %}
+        <button type="button" class="btn btn-secondary btn-sm"
+                onclick="document.getElementById('username').value='buyer';document.getElementById('password').value='demo123';">
+            填入演示买家账号
+        </button>
+        {% else %}
         <p style="font-size:13px;color:var(--text-secondary);cursor:pointer;" onclick="document.getElementById('username').value='demo';document.getElementById('password').value='demo123';">
             测试账号：demo / demo123
         </p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

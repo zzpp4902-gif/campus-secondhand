@@ -10,6 +10,7 @@ from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 from threading import Lock
+from urllib.parse import unquote
 
 import psycopg2
 import psycopg2.extras
@@ -253,6 +254,11 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    next_page = request.args.get('next', '')
+    decoded = unquote(next_page)
+    if (not decoded.startswith('/') or decoded.startswith('//') or '\\' in decoded
+            or any(ord(char) < 32 or ord(char) == 127 for char in decoded)):
+        next_page = None
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
@@ -264,12 +270,15 @@ def login():
             user['session_token'] = token
             session['session_token'] = token
             login_user(User(user))
-            next_page = request.args.get('next')
             flash('登录成功', 'success')
             return redirect(next_page or url_for('index'))
         flash('用户名或密码错误', 'error')
-        return redirect(url_for('login'))
-    return render_template('login.html')
+        return redirect(url_for('login', next=next_page))
+    show_demo_buyer = (
+        app.config['TOSS_DEMO_ENABLED']
+        and next_page == url_for('detail', item_id=app.config['TOSS_DEMO_ITEM_ID'])
+    )
+    return render_template('login.html', next_page=next_page, show_demo_buyer=show_demo_buyer)
 
 
 @app.route('/logout')
