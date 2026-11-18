@@ -23,8 +23,9 @@
     {% if items %}
         {% for item in items %}
             <div class="profile-item">
-                {% if item.image_base64 %}
-                    <img src="{{ item.image_base64 }}" alt="{{ item.title }}" class="profile-item-img">
+                {% set thumbnail = item_thumbnail(item, item.id) %}
+                {% if thumbnail %}
+                    <img src="{{ thumbnail }}" alt="{{ item.title }}" class="profile-item-img" loading="lazy" decoding="async">
                 {% else %}
                     <div class="profile-item-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;">暂无图</div>
                 {% endif %}
@@ -101,14 +102,15 @@
     {% if applications %}
         {% for app in applications %}
             <div class="profile-item">
-                {% if app.item_image %}
-                    <img src="{{ app.item_image }}" alt="{{ app.item_title }}" class="profile-item-img">
+                {% set thumbnail = item_thumbnail(app, app.item_id) %}
+                {% if thumbnail %}
+                    <img src="{{ thumbnail }}" alt="{{ app.title }}" class="profile-item-img" loading="lazy" decoding="async">
                 {% else %}
                     <div class="profile-item-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;">暂无图</div>
                 {% endif %}
                 <div class="profile-item-info">
                     <div class="profile-item-title">
-                        <a href="{{ url_for('detail', item_id=app.item_id) }}">{{ app.item_title }}</a>
+                        <a href="{{ url_for('detail', item_id=app.item_id) }}">{{ app.title }}</a>
                         {% if app.status == '申请中' %}
                             <span class="item-tag tag-status-on">{{ app.status }}</span>
                         {% elif app.status == '已约定' %}
@@ -148,8 +150,9 @@
             {% for fav in favorites %}
                 <a href="{{ url_for('detail', item_id=fav.item_id) }}" class="item-card">
                     <div class="item-card-media">
-                        {% if fav.image_base64 %}
-                            <img src="{{ fav.image_base64 }}" alt="{{ fav.title }}" class="item-card-img">
+                        {% set thumbnail = item_thumbnail(fav, fav.item_id) %}
+                        {% if thumbnail %}
+                            <img src="{{ thumbnail }}" alt="{{ fav.title }}" class="item-card-img" loading="lazy" decoding="async">
                         {% else %}
                             <div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:14px;">暂无图片</div>
                         {% endif %}

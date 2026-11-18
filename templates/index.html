@@ -33,8 +33,10 @@
         {% for item in items %}
             <a href="{{ url_for('detail', item_id=item.id) }}" class="item-card">
                 <div class="item-card-media">
-                    {% if item.image_base64 %}
-                        <img src="{{ item.image_base64 }}" alt="{{ item.title }}" class="item-card-img">
+                    {% set thumbnail = item_thumbnail(item, item.id) %}
+                    {% if thumbnail %}
+                        <img src="{{ thumbnail }}" alt="{{ item.title }}" class="item-card-img"
+                             decoding="async"{% if loop.index > 4 %} loading="lazy"{% endif %}>
                     {% else %}
                         <div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:14px;">暂无图片</div>
                     {% endif %}

@@ -62,8 +62,9 @@
             <!-- 关联商品卡片展示 -->
             {% if current_item %}
                 <div class="chat-item-banner">
-                    {% if current_item.image_base64 %}
-                        <img src="{{ current_item.image_base64 }}" alt="{{ current_item.title }}" class="chat-item-thumb">
+                    {% set thumbnail = item_thumbnail(current_item, current_item.id) %}
+                    {% if thumbnail %}
+                        <img src="{{ thumbnail }}" alt="{{ current_item.title }}" class="chat-item-thumb" decoding="async">
                     {% else %}
                         <div class="chat-item-thumb chat-thumb-placeholder">🛍️</div>
                     {% endif %}
@@ -171,6 +172,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 格式化气泡追加
     function appendMessage(msg, isMe) {
+        if (chatContainer.querySelector(`.message-row[data-msg-id="${msg.id}"]`)) return;
         if (historyEmpty) {
             historyEmpty.remove();
         }
@@ -234,27 +236,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 定时轮询拉取对方发送的新消息（每 3 秒）
-    if (receiverId) {
-        setInterval(async function() {
-            const lastId = getMaxMsgId();
-            try {
-                const resp = await fetch(`{{ url_for('api_get_messages') }}?other_id=${receiverId.value}&after_id=${lastId}`);
-                const data = await resp.json();
-                if (data.status === 'success' && data.messages && data.messages.length > 0) {
-                    data.messages.forEach(m => {
-                        // 避免重复追加自己刚发的消息
-                        const exists = chatContainer.querySelector(`.message-row[data-msg-id="${m.id}"]`);
-                        if (!exists) {
-                            appendMessage(m, m.is_me);
-                        }
-                    });
-                }
-            } catch (e) {
-                // 静默忽略网络小波动
+    let polling = false;
+    async function refreshMessages() {
+        if (polling || document.hidden) return;
+        polling = true;
+        try {
+            const params = new URLSearchParams({other_id: receiverId.value, after_id: getMaxMsgId()});
+            const resp = await fetch(`{{ url_for('api_get_messages') }}?${params}`, {
+                cache: 'no-store',
+                signal: AbortSignal.timeout?.(10000)
+            });
+            if (!resp.ok || resp.redirected) return;
+            const data = await resp.json();
+            if (data.status === 'success') {
+                data.messages.forEach(message => appendMessage(message, message.is_me));
             }
-        }, 3000);
+        } catch (error) {
+            // 下一次检查会重试网络错误。
+        } finally {
+            polling = false;
+        }
     }
+    setInterval(refreshMessages, 3000);
+    document.addEventListener('visibilitychange', refreshMessages);
+    window.addEventListener('focus', refreshMessages);
 });
 </script>
 {% endblock %}

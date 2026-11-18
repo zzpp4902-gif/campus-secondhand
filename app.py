@@ -1,18 +1,22 @@
+import base64
+import binascii
 import json
 import mimetypes
 import os
 import uuid
 import re
 from datetime import datetime
-from functools import wraps
 from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
+from threading import Lock
 
 import psycopg2
 import psycopg2.extras
+from psycopg2.pool import ThreadedConnectionPool
 from dotenv import load_dotenv
-from flask import (Flask, flash, redirect, render_template, request,
-                   session, url_for)
+from flask import (Flask, abort, flash, g, redirect, render_template, request,
+                   send_file, session, url_for)
 from flask_login import (LoginManager, UserMixin, current_user,
                          login_required, login_user, logout_user)
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -32,47 +36,64 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '')
 DETAIL_PHOTOS = json.loads(
     Path(__file__).with_name('sample_images').joinpath('detail_photos.json').read_text(encoding='utf-8')
 )
+ITEM_PHOTO_FIELDS = """
+    encode(sha256(convert_to(NULLIF(i.image_base64, ''), 'UTF8')), 'hex') AS image_hash,
+    u.username AS seller_username
+"""
+IMAGE_DATA_URL = re.compile(r'data:(image/(?:jpeg|png|webp|gif|avif));base64,([A-Za-z0-9+/=]+)')
+db_pool = None
+db_pool_lock = Lock()
 
 
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
-    conn.autocommit = True
-    return conn
+    global db_pool
+    if 'db' not in g:
+        if db_pool is None:
+            with db_pool_lock:
+                if db_pool is None:
+                    db_pool = ThreadedConnectionPool(1, 8, DATABASE_URL, connect_timeout=5)
+        g.db = db_pool.getconn()
+        g.db.autocommit = True
+    return g.db
+
+
+@app.teardown_appcontext
+def release_db(error=None):
+    conn = g.pop('db', None)
+    if conn is not None:
+        db_pool.putconn(conn, close=bool(conn.closed))
 
 
 def query_db(query, args=(), one=False):
     conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute(query, args)
-    rv = cur.fetchall()
-    cur.close()
-    conn.close()
-    return (rv[0] if rv else None) if one else rv
+    try:
+        return fetch_rows(conn, query, args, one)
+    except (psycopg2.InterfaceError, psycopg2.OperationalError):
+        # A read can be retried if an idle connection was closed upstream.
+        if not conn.closed:
+            raise
+        release_db()
+        return fetch_rows(get_db(), query, args, one)
 
 
-def execute_db(query, args=()):
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(query, args)
-    conn.commit()
-    cur.close()
-    conn.close()
+def fetch_rows(conn, query, args, one):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(query, args)
+        return cur.fetchone() if one else cur.fetchall()
+
+
+def execute_db(query, args=(), returning=False):
+    with get_db().cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(query, args)
+        if returning:
+            return cur.fetchone()
 
 
 def execute_transaction(operations):
-    """Executes multiple queries in a single atomic ACID transaction with rollback on failure."""
     conn = get_db()
-    cur = conn.cursor()
-    try:
+    with conn, conn.cursor() as cur:
         for query, args in operations:
             cur.execute(query, args)
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        cur.close()
-        conn.close()
 
 
 class User(UserMixin):
@@ -88,13 +109,12 @@ class User(UserMixin):
 @app.before_request
 def check_single_session():
     # 静态资源、健康检查接口跳过校验
-    if request.endpoint in ('static', 'healthz') or request.path.startswith('/static'):
+    if request.endpoint in ('static', 'healthz', 'item_photo') or request.path.startswith('/static'):
         return None
 
     if current_user.is_authenticated:
         client_token = session.get('session_token')
-        user_db = query_db('SELECT session_token FROM users WHERE id = %s', (current_user.id,), one=True)
-        if not user_db or not user_db.get('session_token') or user_db['session_token'] != client_token:
+        if not current_user.session_token or current_user.session_token != client_token:
             # 顶号踢出逻辑
             logout_user()
             session.clear()
@@ -130,11 +150,50 @@ def time_ago(dt):
 app.jinja_env.filters['time_ago'] = time_ago
 
 
+def reference_photo_for(item):
+    if item['seller_username'] == 'demo':
+        photo = DETAIL_PHOTOS.get(item['title'])
+        if photo and item['image_hash'] in photo['original_hashes']:
+            return photo
+    return None
+
+
+@app.template_global()
+def item_thumbnail(item, item_id):
+    photo = reference_photo_for(item)
+    if photo:
+        return url_for('static', filename='product-photos/thumbs/' + photo['file'])
+    if item['image_hash']:
+        return url_for('item_photo', item_id=item_id, v=item['image_hash'])
+    return None
+
+
+@app.route('/item/<int:item_id>/photo')
+def item_photo(item_id):
+    item = query_db('SELECT image_base64 FROM items WHERE id = %s', (item_id,), one=True)
+    encoded = item['image_base64'] if item else None
+    match = IMAGE_DATA_URL.fullmatch(encoded or '')
+    if match is None:
+        abort(404)
+    try:
+        data = base64.b64decode(match[2], validate=True)
+    except binascii.Error:
+        abort(404)
+    version = sha256(encoded.encode('utf-8')).hexdigest()
+    response = send_file(BytesIO(data), mimetype=match[1], etag=version,
+                         max_age=86400 if request.args.get('v') == version else 0)
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @app.route('/')
 def index():
     keyword = request.args.get('keyword', '').strip()
     category = request.args.get('category', '').strip()
-    query = "SELECT i.*, u.nickname as seller_nickname, u.school as seller_school FROM items i JOIN users u ON i.seller_id = u.id WHERE i.status = '在售'"
+    query = f"""
+        SELECT i.id, i.title, i.price, i.condition, i.created_at, u.school AS seller_school, {ITEM_PHOTO_FIELDS}
+        FROM items i JOIN users u ON i.seller_id = u.id WHERE i.status = '在售'
+    """
     args = []
     if keyword:
         query += " AND i.title ILIKE %s"
@@ -254,8 +313,11 @@ def publish():
 @app.route('/item/<int:item_id>')
 def detail(item_id):
     item = query_db(
-        'SELECT i.*, u.nickname as seller_nickname, u.school as seller_school, '
-        'u.username as seller_username FROM items i JOIN users u ON i.seller_id = u.id WHERE i.id = %s',
+        f"""
+        SELECT i.id, i.seller_id, i.title, i.category, i.price, i.condition, i.description,
+               i.status, i.created_at, u.nickname AS seller_nickname, u.school AS seller_school, {ITEM_PHOTO_FIELDS}
+        FROM items i JOIN users u ON i.seller_id = u.id WHERE i.id = %s
+        """,
         (item_id,), one=True)
     if not item:
         flash('商品不存在', 'error')
@@ -268,15 +330,8 @@ def detail(item_id):
         fav = query_db('SELECT id FROM favorites WHERE user_id = %s AND item_id = %s',
                        (current_user.id, item_id), one=True)
         is_favorited = fav is not None
-    reference_photo = None
-    if item['seller_username'] == 'demo':
-        photo = DETAIL_PHOTOS.get(item['title'])
-        stored_image = item['image_base64'] or ''
-        # 用户后来上传的新图优先于示例参考图。
-        if photo and sha256(stored_image.encode('utf-8')).hexdigest() in photo['original_hashes']:
-            reference_photo = photo
     return render_template('detail.html', item=item, messages=messages,
-                           is_favorited=is_favorited, reference_photo=reference_photo)
+                           is_favorited=is_favorited, reference_photo=reference_photo_for(item))
 
 
 @app.route('/item/<int:item_id>/edit', methods=['GET', 'POST'])
@@ -444,24 +499,41 @@ def profile():
     tab = request.args.get('tab', 'published')
     if tab == 'published':
         items = query_db(
-            'SELECT i.*, (SELECT COUNT(*) FROM applications a WHERE a.item_id=i.id AND a.status=%s) as pending_count FROM items i WHERE i.seller_id=%s ORDER BY i.created_at DESC',
-            ('申请中', current_user.id))
-        applications_by_item = {}
-        for item in items:
-            apps = query_db(
-                'SELECT a.*, u.nickname as buyer_nickname, u.school as buyer_school FROM applications a JOIN users u ON a.buyer_id=u.id WHERE a.item_id=%s ORDER BY a.created_at DESC',
-                (item['id'],))
-            applications_by_item[item['id']] = apps
+            f"""
+            SELECT i.id, i.title, i.price, i.category, i.condition, i.status, i.created_at, {ITEM_PHOTO_FIELDS}
+            FROM items i JOIN users u ON u.id = i.seller_id
+            WHERE i.seller_id = %s ORDER BY i.created_at DESC
+            """,
+            (current_user.id,))
+        applications_by_item = {item['id']: [] for item in items}
+        if applications_by_item:
+            applications = query_db(
+                """
+                SELECT a.*, u.nickname AS buyer_nickname, u.school AS buyer_school
+                FROM applications a JOIN users u ON u.id = a.buyer_id
+                WHERE a.item_id = ANY(%s) ORDER BY a.created_at DESC, a.id DESC
+                """,
+                (list(applications_by_item),))
+            for application in applications:
+                applications_by_item[application['item_id']].append(application)
         return render_template('profile.html', tab=tab, items=items,
                                applications_by_item=applications_by_item)
     elif tab == 'applied':
         applications = query_db(
-            'SELECT a.*, i.title as item_title, i.price as item_price, i.image_base64 as item_image, u.nickname as seller_nickname FROM applications a JOIN items i ON a.item_id=i.id JOIN users u ON a.seller_id=u.id WHERE a.buyer_id=%s ORDER BY a.created_at DESC',
+            f"""
+            SELECT a.*, i.title, i.price AS item_price, u.nickname AS seller_nickname, {ITEM_PHOTO_FIELDS}
+            FROM applications a JOIN items i ON i.id = a.item_id JOIN users u ON u.id = i.seller_id
+            WHERE a.buyer_id = %s ORDER BY a.created_at DESC
+            """,
             (current_user.id,))
         return render_template('profile.html', tab=tab, applications=applications)
     elif tab == 'favorites':
         favorites = query_db(
-            'SELECT f.*, i.title, i.price, i.image_base64, i.status, u.nickname as seller_nickname FROM favorites f JOIN items i ON f.item_id=i.id JOIN users u ON i.seller_id=u.id WHERE f.user_id=%s ORDER BY f.created_at DESC',
+            f"""
+            SELECT f.*, i.title, i.price, i.status, u.nickname AS seller_nickname, {ITEM_PHOTO_FIELDS}
+            FROM favorites f JOIN items i ON i.id = f.item_id JOIN users u ON u.id = i.seller_id
+            WHERE f.user_id = %s ORDER BY f.created_at DESC
+            """,
             (current_user.id,))
         return render_template('profile.html', tab=tab, favorites=favorites)
     return redirect(url_for('profile'))
@@ -541,7 +613,7 @@ def chat_view():
 
     current_item = None
     if item_id:
-        current_item = query_db('SELECT id, title, price, status, image_base64 FROM items WHERE id = %s', (item_id,), one=True)
+        current_item = chat_item(item_id)
 
     chat_history = []
     if selected_user:
@@ -559,7 +631,7 @@ def chat_view():
         if not current_item and chat_history:
             for msg in reversed(chat_history):
                 if msg.get('item_id'):
-                    current_item = query_db('SELECT id, title, price, status, image_base64 FROM items WHERE id = %s', (msg['item_id'],), one=True)
+                    current_item = chat_item(msg['item_id'])
                     if current_item:
                         break
 
@@ -568,6 +640,15 @@ def chat_view():
                            selected_user=selected_user,
                            chat_history=chat_history,
                            current_item=current_item)
+
+
+def chat_item(item_id):
+    return query_db(
+        f"""
+        SELECT i.id, i.title, i.price, i.status, {ITEM_PHOTO_FIELDS}
+        FROM items i JOIN users u ON u.id = i.seller_id WHERE i.id = %s
+        """,
+        (item_id,), one=True)
 
 
 @app.route('/api/chat/send', methods=['POST'])
@@ -584,14 +665,12 @@ def api_send_chat():
     if len(content) > 1000:
         return {'status': 'error', 'message': '消息长度不能超过1000字'}, 400
 
-    execute_db(
-        'INSERT INTO chat_messages (sender_id, receiver_id, item_id, content) VALUES (%s, %s, %s, %s)',
-        (current_user.id, receiver_id, item_id, content)
-    )
-    msg = query_db(
-        'SELECT id, sender_id, receiver_id, content, created_at FROM chat_messages WHERE sender_id = %s ORDER BY id DESC LIMIT 1',
-        (current_user.id,), one=True
-    )
+    msg = execute_db(
+        """
+        INSERT INTO chat_messages (sender_id, receiver_id, item_id, content)
+        VALUES (%s, %s, %s, %s) RETURNING id, sender_id, content, created_at
+        """,
+        (current_user.id, receiver_id, item_id, content), returning=True)
     return {
         'status': 'success',
         'message': {

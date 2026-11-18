@@ -15,8 +15,9 @@
                     <a href="{{ reference_photo.license_url }}" target="_blank" rel="noopener noreferrer">{{ reference_photo.license }}（已调整图片）</a>
                 {% endif %}
             </figcaption>
-        {% elif item.image_base64 %}
-            <img src="{{ item.image_base64 }}" alt="{{ item.title }}" class="detail-image">
+        {% elif item.image_hash %}
+            <img src="{{ url_for('item_photo', item_id=item.id, v=item.image_hash) }}"
+                 alt="{{ item.title }}" class="detail-image">
         {% else %}
             <div class="detail-image" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:16px;min-height:380px;">暂无图片</div>
         {% endif %}
