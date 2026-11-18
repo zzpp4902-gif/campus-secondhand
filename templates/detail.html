@@ -42,6 +42,21 @@
             <div class="detail-price">₩{{ "{:,}".format(item.price) }}</div>
         </div>
 
+        {% if show_demo_payment %}
+            <div class="detail-demo-payment" id="purchase">
+                {% if current_user.is_authenticated %}
+                    <form method="POST" action="{{ url_for('toss_demo.create', item_id=item.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ toss_demo_csrf() }}">
+                        <button type="submit" class="btn btn-primary">购买</button>
+                    </form>
+                {% else %}
+                    <a class="btn btn-primary"
+                       href="{{ url_for('login', next=url_for('detail', item_id=item.id, _anchor='purchase')) }}">购买</a>
+                {% endif %}
+                <small>Toss 模拟支付 · 不会扣款</small>
+            </div>
+        {% endif %}
+
         <div class="detail-meta-box">
             <div class="detail-meta-item">
                 <span>🏷️</span>
@@ -92,20 +107,6 @@
                 <a href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}" class="btn btn-primary">登录后申请</a>
             {% endif %}
         </div>
-        {% if show_demo_payment and (not current_user.is_authenticated or current_user.id|string != item.seller_id|string) %}
-            <div class="detail-demo-payment">
-                {% if current_user.is_authenticated %}
-                    <form method="POST" action="{{ url_for('toss_demo.create', item_id=item.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ toss_demo_csrf() }}">
-                        <button type="submit" class="btn btn-secondary btn-sm">体验 Toss 模拟支付</button>
-                    </form>
-                {% else %}
-                    <a class="btn btn-secondary btn-sm"
-                       href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}">登录后体验 Toss 模拟支付</a>
-                {% endif %}
-                <small>课程演示 · 测试环境不会扣款</small>
-            </div>
-        {% endif %}
     </div>
 
     <!-- 意向申请弹窗 -->

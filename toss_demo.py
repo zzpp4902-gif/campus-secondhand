@@ -15,6 +15,7 @@ from flask_login import current_user, login_required
 
 ORDER_ID = re.compile(r'[a-f0-9]{32}')
 SUPPORTED_RESULTS = {'DONE', 'WAITING_FOR_DEPOSIT', 'CANCELED', 'ABORTED', 'EXPIRED'}
+MINIMUM_TEST_AMOUNT = 200
 
 
 class TossRequestError(Exception):
@@ -34,7 +35,8 @@ def configure_toss_demo(app):
     except ValueError:
         parsed_origin = urlsplit('')
         host = None
-    item_id = os.getenv('TOSS_DEMO_ITEM_ID', '29')
+    item_id = os.getenv('TOSS_DEMO_ITEM_ID', '').strip()
+    item_id_valid = not item_id or bool(re.fullmatch(r'[1-9][0-9]{0,9}', item_id))
     is_local = parsed_origin.scheme == 'http' and host in {'localhost', '127.0.0.1'}
     origin_ok = (
         host and (parsed_origin.scheme == 'https' or is_local)
@@ -44,20 +46,20 @@ def configure_toss_demo(app):
         os.getenv('TOSS_DEMO_ENABLED') == '1'
         and re.fullmatch(r'test_gck_[A-Za-z0-9_-]+', client_key)
         and re.fullmatch(r'test_gsk_[A-Za-z0-9_-]+', secret_key)
-        and origin_ok and item_id.isascii() and item_id.isdecimal() and len(item_id) <= 10
+        and origin_ok and item_id_valid
     )
     app.config['TOSS_DEMO_CLIENT_KEY'] = client_key
     app.config['TOSS_DEMO_SECRET_KEY'] = secret_key
     app.config['TOSS_DEMO_ORIGIN'] = origin
-    app.config['TOSS_DEMO_ITEM_ID'] = int(item_id) if app.config['TOSS_DEMO_ENABLED'] else None
+    app.config['TOSS_DEMO_ITEM_ID'] = int(item_id) if item_id and item_id_valid else None
 
 
 def is_demo_item(item):
+    configured_item = current_app.config['TOSS_DEMO_ITEM_ID']
     return (
         current_app.config['TOSS_DEMO_ENABLED']
-        and item['id'] == current_app.config['TOSS_DEMO_ITEM_ID']
-        and item['seller_username'] == 'demo'
-        and item['status'] == '在售' and item['price'] > 0
+        and (configured_item is None or item['id'] == configured_item)
+        and item['status'] == '在售' and item['price'] >= MINIMUM_TEST_AMOUNT
     )
 
 
@@ -157,12 +159,9 @@ def register_toss_demo(app, query_db, execute_db):
     def create(item_id):
         require_csrf()
         item = query_db(
-            """
-            SELECT i.id, i.seller_id, i.title, i.price, i.status, u.username AS seller_username
-            FROM items i JOIN users u ON u.id = i.seller_id WHERE i.id = %s
-            """,
+            'SELECT id, title, price, status FROM items WHERE id = %s',
             (item_id,), one=True)
-        if not item or not is_demo_item(item) or str(item['seller_id']) == current_user.id:
+        if not item or not is_demo_item(item):
             abort(404)
         order = execute_db(
             """
@@ -189,7 +188,7 @@ def register_toss_demo(app, query_db, execute_db):
             'customerKey': session['toss_demo_customer'],
             'amount': order['amount'],
             'orderId': order_id,
-            'orderName': order['order_name'],
+            'orderName': '캠퍼스 중고거래 결제 실습',
             'successUrl': origin + url_for('.success'),
             'failUrl': origin + url_for('.failure') + '?' + urlencode({'ref': order_id}),
         }

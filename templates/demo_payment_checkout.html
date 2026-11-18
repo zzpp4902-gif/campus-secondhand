@@ -3,7 +3,7 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/demo-payment.css') }}">
 <script defer src="https://js.tosspayments.com/v2/standard"></script>
-<script defer src="{{ url_for('static', filename='js/demo-payment.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/demo-payment.js', v=2) }}"></script>
 {% endblock %}
 {% block content %}
 <section class="demo-payment">
@@ -20,7 +20,7 @@
             <strong>₩{{ "{:,}".format(order.amount) }}</strong>
         </div>
     </div>
-    <p id="demo-payment-status" class="demo-payment-description" role="status">正在加载 Toss 测试结账…</p>
+    <p id="demo-payment-status" class="demo-payment-description" role="status">正在打开 Toss 测试支付…</p>
     <div id="demo-payment-methods"></div>
     <div id="demo-payment-agreement"></div>
     <noscript><p>启用 JavaScript 后才能打开 Toss 测试结账。</p></noscript>

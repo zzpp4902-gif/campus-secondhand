@@ -1030,14 +1030,18 @@ img {
 }
 
 .detail-demo-payment {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    margin-top: 16px;
+    margin: 0 0 16px;
+    scroll-margin-top: 80px;
+}
+
+.detail-demo-payment .btn {
+    width: 100%;
+    min-height: 46px;
 }
 
 .detail-demo-payment small {
+    display: block;
+    margin-top: 6px;
     color: var(--text-secondary);
 }
 

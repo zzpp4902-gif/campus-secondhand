@@ -276,7 +276,7 @@ def login():
         return redirect(url_for('login', next=next_page))
     show_demo_buyer = (
         app.config['TOSS_DEMO_ENABLED']
-        and next_page == url_for('detail', item_id=app.config['TOSS_DEMO_ITEM_ID'])
+        and bool(re.fullmatch(r'/item/[0-9]+#purchase', next_page or ''))
     )
     return render_template('login.html', next_page=next_page, show_demo_buyer=show_demo_buyer)
 
