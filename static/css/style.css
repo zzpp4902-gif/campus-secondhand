@@ -1029,6 +1029,18 @@ img {
     padding: 13px 20px;
 }
 
+.detail-demo-payment {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 16px;
+}
+
+.detail-demo-payment small {
+    color: var(--text-secondary);
+}
+
 /* ==========================================================================
    留言板 (Message Section)
    ========================================================================== */

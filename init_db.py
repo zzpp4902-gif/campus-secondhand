@@ -67,6 +67,21 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_sender_receiver ON chat_messages(sender_id, receiver_id);
 CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages(created_at);
+
+CREATE TABLE IF NOT EXISTS demo_payment_orders (
+    order_id VARCHAR(64) PRIMARY KEY,
+    buyer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    order_name VARCHAR(100) NOT NULL,
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    payment_key VARCHAR(200) UNIQUE,
+    status VARCHAR(24) NOT NULL DEFAULT 'READY'
+        CHECK (status IN ('READY', 'CHECKING', 'WAITING_FOR_DEPOSIT', 'DONE', 'FAILED', 'CANCELED')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_demo_payment_ready
+    ON demo_payment_orders(buyer_id, item_id) WHERE status = 'READY';
 """
 
 
@@ -82,9 +97,9 @@ def main():
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(100);")
         cur.close()
         conn.close()
-        print('数据库建表完成：users, items, applications, messages, favorites, chat_messages')
+        print('数据库建表完成：users, items, applications, messages, favorites, chat_messages, demo_payment_orders')
     except Exception as e:
-        print(f'建表失败：{e}')
+        raise SystemExit(f'建表失败：{e}') from None
 
 
 if __name__ == '__main__':

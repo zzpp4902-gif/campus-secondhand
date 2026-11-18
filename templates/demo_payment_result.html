@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}模拟支付结果 - 중고캠퍼스{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/demo-payment.css') }}">
+{% endblock %}
+{% block content %}
+<section class="demo-payment">
+    <p class="demo-payment-label">课程演示 · 测试环境</p>
+    {% if invalid %}
+        <h1>模拟订单核对失败</h1>
+        <p class="demo-payment-description">返回商品后重新发起演示支付。</p>
+    {% elif confirm_key %}
+        <h1>正在确认模拟支付</h1>
+        <p class="demo-payment-description">Toss 已返回认证结果，正在向 Toss 核对订单。</p>
+    {% elif order.status == 'DONE' %}
+        <h1>模拟支付成功</h1>
+        <p class="demo-payment-description">Toss 测试环境已确认本次支付。你可以回到商品继续约定面交。</p>
+    {% elif order.status == 'WAITING_FOR_DEPOSIT' %}
+        <h1>等待模拟入账</h1>
+        <p class="demo-payment-description">如能访问对应 Toss 测试商户，在测试后台执行模拟入账，然后点击「检查结果」。</p>
+    {% elif order.status == 'CHECKING' %}
+        <h1>等待确认结果</h1>
+        <p class="demo-payment-description">Toss 暂未返回可确认的结果。稍后点击「检查结果」。</p>
+    {% elif order.status == 'CANCELED' %}
+        <h1>已取消模拟支付</h1>
+        <p class="demo-payment-description">可以返回商品重新发起演示。</p>
+    {% elif order.status == 'FAILED' %}
+        <h1>模拟支付未完成</h1>
+        <p class="demo-payment-description">可以返回商品重新发起演示。</p>
+    {% else %}
+        <h1>模拟支付尚未开始</h1>
+        <p class="demo-payment-description">打开结账页继续演示。</p>
+    {% endif %}
+    <div class="demo-payment-summary">
+        <div>
+            <span>演示商品</span>
+            <strong>{{ order.order_name }}</strong>
+        </div>
+        <div>
+            <span>测试金额</span>
+            <strong>₩{{ "{:,}".format(order.amount) }}</strong>
+        </div>
+    </div>
+    <p class="demo-payment-order">演示订单号 <span>{{ order.order_id }}</span></p>
+    <div class="demo-payment-actions">
+        <a class="btn btn-secondary" href="{{ url_for('detail', item_id=order.item_id) }}">返回商品</a>
+        {% if not invalid and (confirm_key or order.status in ['CHECKING', 'WAITING_FOR_DEPOSIT']) %}
+            <form method="POST" action="{{ url_for('toss_demo.confirm', order_id=order.order_id) }}"
+                  id="demo-payment-confirm"{% if confirm_key %} data-auto-submit{% endif %}>
+                <input type="hidden" name="csrf_token" value="{{ toss_demo_csrf() }}">
+                {% if confirm_key %}
+                    <input type="hidden" name="payment_key" value="{{ confirm_key }}">
+                    <input type="hidden" name="amount" value="{{ order.amount }}">
+                {% endif %}
+                <button class="btn btn-primary" type="submit">检查结果</button>
+            </form>
+            <script defer src="{{ url_for('static', filename='js/demo-payment.js') }}"></script>
+        {% elif not invalid and order.status == 'READY' %}
+            <a class="btn btn-primary" href="{{ url_for('toss_demo.checkout', order_id=order.order_id) }}">继续模拟支付</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

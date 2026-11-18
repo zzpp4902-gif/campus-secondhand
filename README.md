@@ -92,6 +92,14 @@ python app.py
 
 项目已包含 `Procfile` 和 `render.yaml`，可自动识别配置。
 
+## Toss 模拟支付
+
+在 Render 中设置 `TOSS_DEMO_ENABLED=1`、`TOSS_DEMO_ORIGIN`（网站的 HTTPS 地址），以及同一套 Toss 组件测试密钥 `TOSS_CLIENT_KEY` 和 `TOSS_SECRET_KEY`。默认演示商品为第 29 号商品，可以用 `TOSS_DEMO_ITEM_ID` 指定另一件在售的演示账号商品。配置参考 [Toss 测试环境说明](https://docs.tosspayments.com/guides/v2/get-started/environment)。
+
+使用买家账号从演示商品详情打开 Toss 测试结账。服务器确认的结果记录在独立的 `demo_payment_orders` 表，不影响商品和线下面交状态。
+
+要关闭演示入口，在 Render 将 `TOSS_DEMO_ENABLED` 改为 `0` 并部署。要恢复整个发布前版本，在 Render 的 Deploys 中回滚到 `96e39ae`。GitHub 回退点为 `backup/pre-toss-2026-11-18`。
+
 ## 数据库表结构
 
 - **users**：用户表（id, username, password_hash, nickname, school, created_at）

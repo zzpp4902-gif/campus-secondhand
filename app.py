@@ -21,6 +21,8 @@ from flask_login import (LoginManager, UserMixin, current_user,
                          login_required, login_user, logout_user)
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from toss_demo import is_demo_item, register_toss_demo
+
 load_dotenv()
 mimetypes.add_type('image/webp', '.webp')
 
@@ -94,6 +96,9 @@ def execute_transaction(operations):
     with conn, conn.cursor() as cur:
         for query, args in operations:
             cur.execute(query, args)
+
+
+register_toss_demo(app, query_db, execute_db)
 
 
 class User(UserMixin):
@@ -331,7 +336,8 @@ def detail(item_id):
                        (current_user.id, item_id), one=True)
         is_favorited = fav is not None
     return render_template('detail.html', item=item, messages=messages,
-                           is_favorited=is_favorited, reference_photo=reference_photo_for(item))
+                           is_favorited=is_favorited, reference_photo=reference_photo_for(item),
+                           show_demo_payment=is_demo_item(item))
 
 
 @app.route('/item/<int:item_id>/edit', methods=['GET', 'POST'])
