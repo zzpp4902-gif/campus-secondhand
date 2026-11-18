@@ -1,0 +1,262 @@
+{
+  "高等数学教材（同济第七版）": {
+    "file": "sample-01.webp",
+    "original_hashes": [
+      "db4050a0ba1d3916fdb74205236de9c9d1e47e0aac4f678735cb6c9299072b1a"
+    ]
+  },
+  "Python编程从入门到实践": {
+    "file": "sample-02.webp",
+    "original_hashes": [
+      "d88a9adc4ce5410c0520a4ddd4742ba808124ed7ad4273ae93588a7f8eb54639"
+    ]
+  },
+  "线性代数习题集": {
+    "file": "sample-03.webp",
+    "original_hashes": [
+      "51d44ccc261545d924ae2e1f06b3bc8d443248ec03951fbe4b13759c32249882"
+    ]
+  },
+  "大学英语四级真题": {
+    "file": "sample-04.webp",
+    "original_hashes": [
+      "86805bd088529444bff9e5c35e540591fe3320e56605bd2d61b19af957306a2c"
+    ]
+  },
+  "数据结构与算法": {
+    "file": "sample-05.webp",
+    "original_hashes": [
+      "2f5664d05db39da6485c9d649cd45a5392f9deaa540d33698bda20ed9453140a"
+    ]
+  },
+  "小米空气净化器": {
+    "file": "sample-06.webp",
+    "original_hashes": [
+      "f6e0c17db1fb1f84a41c4b70c092a2b5705e3e5b425892948ee3d14d78a25cf9"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Xiaomi_Smart_Air_Purifier_2S.jpg",
+    "credit": "GEEK KAZU",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0"
+  },
+  "罗技无线鼠标": {
+    "file": "sample-07.webp",
+    "original_hashes": [
+      "08911fa96d3e8e2a48c1800e66be0689867c8f6e9c71139a433d143d993f5540"
+    ],
+    "source": "https://www.flickr.com/photos/8996753@N06/30025487456",
+    "credit": "MiNe (sfmine79)",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "三星27寸显示器": {
+    "file": "sample-08.webp",
+    "original_hashes": [
+      "b75a1bb9b10e56550efa3713fe233ef54dea7eafab92593b14dd97c479074e29"
+    ]
+  },
+  "小米手环7": {
+    "file": "sample-09.webp",
+    "original_hashes": [
+      "f3b885ec4d9f3a667831c2b5b2ceede077f1e91baa71bd9863e2456d553bcf23"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Xiaomi_Smart_Band_7.jpg",
+    "credit": "Maksdroider",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "Kindle Paperwhite": {
+    "file": "sample-10.webp",
+    "original_hashes": [
+      "b0250fca60582e387dbe363fbec696edf1bf3b632fd0d2951af1b2b605e41dff"
+    ]
+  },
+  "电饭煲（3L）": {
+    "file": "sample-11.webp",
+    "original_hashes": [
+      "0305b6b2b8c3f6ead7797f28582a7be3a5e0697942206019c87b3fbcca9780d7"
+    ],
+    "source": "https://www.flickr.com/photos/30139045@N00/52617835261",
+    "credit": "tawalker",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "电热水壶": {
+    "file": "sample-12.webp",
+    "original_hashes": [
+      "130a49d3a38feed85f4188bde6efb18c51857fe746d1b05819041e239c3c1df7"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Kettle_pic.jpg",
+    "credit": "Manojkumar Subramani",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "台灯（护眼LED）": {
+    "file": "sample-13.webp",
+    "original_hashes": [
+      "67b3688ec8469f2ca4bd221eeb0dbab6523ac917ca267ea15f15a210a3a377d0"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Concise_bamboo_eye_protection_LED_desk_lamp.jpg",
+    "credit": "Indesign Technology",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "吹风机": {
+    "file": "sample-14.webp",
+    "original_hashes": [
+      "8669d049b4a89eaf206cd88e28435ab5f55bae57b5ef5e873aef400f453f2c0a"
+    ]
+  },
+  "体重秤": {
+    "file": "sample-15.webp",
+    "original_hashes": [
+      "b2742076eb5310365f5069d842ba9169d9e42b01fe024aab540868c1f1a1916f"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Fitness_digital_scale_weight_loss_(33837094584).jpg",
+    "credit": "franchise opportunities",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+  },
+  "收纳箱（大号3个）": {
+    "file": "sample-16.webp",
+    "original_hashes": [
+      "d79a2208ae32fa85a1bfd61212a571cbe3b7e25f2a8b58e470d17b91085497c8"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:HK_SKD_TSO_%E5%B0%87%E8%BB%8D%E6%BE%B3_Tseung_Kwan_O_%E5%94%90%E4%BF%8A%E8%A1%97_Tong_Chun_Street_%E5%AF%B6%E9%82%91%E8%B7%AF_Po_Yap_Road_%E5%B0%87%E8%BB%8D%E6%BE%B3%E5%BB%A3%E5%A0%B4_TKO_Plaza_mall_shop_%E5%AF%A6%E6%83%A0%E5%AE%B6%E5%B1%85_PriceRite_plastic_box_storage_January_2023_Px3_01.jpg",
+    "credit": "Norswaiu HFAUDNC",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "单人床垫": {
+    "file": "sample-17.webp",
+    "original_hashes": [
+      "6226a147a920db85918794a4ea34bde31d0472e5abc1183ca547e75c7d31d34e"
+    ],
+    "source": "https://www.flickr.com/photos/29971610@N02/32944238916",
+    "credit": "gm.esthermax",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "书桌（简易组装）": {
+    "file": "sample-18.webp",
+    "original_hashes": [
+      "3862f6e1bdafbc0e315191375a41fd20b81a95c4923f342cb957d72237cfc64f"
+    ],
+    "source": "https://www.flickr.com/photos/147592390@N06/46937241334",
+    "credit": "John Beans",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "椅子（人体工学）": {
+    "file": "sample-19.webp",
+    "original_hashes": [
+      "271cac9f8f273682c89ffa0ec275331e15419d93a3ed8becbb9136d124f24a85"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Sihoo_M57_mesh_office_chair_19.jpg",
+    "credit": "Waldyrious",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "书架（五层）": {
+    "file": "sample-20.webp",
+    "original_hashes": [
+      "8218f8fff5f5bfeb997582b32444b8e0a94e4fd5cd3014208dfb6299eaba6dcb"
+    ],
+    "source": "https://www.flickr.com/photos/7455623@N07/3365066035",
+    "credit": "stefan linecker",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "小冰箱（50L）": {
+    "file": "sample-21.webp",
+    "original_hashes": [
+      "46efedb2588da8ec59495e53297e375c1c2bab1c1fca3997e631e38ac7bf3ec4"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Mini_size_fridge_in_rooms_at_Boddington_Hotel,_WA.jpg",
+    "credit": "Kgbo",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "Nike运动鞋（260mm）": {
+    "file": "sample-22.webp",
+    "original_hashes": [
+      "fa3a0a9a382eb91e6efc86bb2c2c73de8de691a7158d4f76b0d42e07124a6cf8"
+    ],
+    "source": "https://www.flickr.com/photos/99648647@N00/94994097",
+    "credit": "flows_2000",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/"
+  },
+  "羽绒服（男L）": {
+    "file": "sample-23.webp",
+    "original_hashes": [
+      "937772904fe3275036ca48203b85c9ac042948b24a750a47ca001e8a8b39615b"
+    ]
+  },
+  "背包（电脑包）": {
+    "file": "sample-24.webp",
+    "original_hashes": [
+      "201ac7e43425cd86169e3b1bba1b991fca1108d7cf414e8a876e518825b88e77"
+    ],
+    "source": "https://commons.wikimedia.org/wiki/File:Arcteryx_Alpha_Fast_light_40_black_backpack.jpg",
+    "credit": "Jjanhone",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "围巾（羊毛）": {
+    "file": "sample-25.webp",
+    "original_hashes": [
+      "3f6ade2b1c3a2de6e1c52a057faac92c982c341dd297c1302ec90f9d5a09e8d0"
+    ],
+    "source": "https://www.flickr.com/photos/100030176@N02/15368112417",
+    "credit": "andrewtoskin",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "棒球帽": {
+    "file": "sample-26.webp",
+    "original_hashes": [
+      "ae02ed2e120d51d116dbb50608f9198a057f545bea734a85de565f14ee0ef0cf"
+    ],
+    "source": "https://www.flickr.com/photos/55676959@N00/2763343672",
+    "credit": "wfyurasko",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "瑜伽垫": {
+    "file": "sample-27.webp",
+    "original_hashes": [
+      "7f125997582c31a14ce1866e7d0bebfb587a8ccb366ce654d7bf7f8d470bb31e"
+    ],
+    "source": "https://www.rawpixel.com/image/11524307/rolled-and-tied-teal-yoga-mat",
+    "credit": "",
+    "license": "CC0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "羽毛球拍（两支）": {
+    "file": "sample-28.webp",
+    "original_hashes": [
+      "bcc2598ef9bf40db5bab1cc73f33a289619b15036e17c442f1624be0d53581cd"
+    ],
+    "source": "https://commons.wikimedia.org/w/index.php?curid=139080296",
+    "credit": "hvshop",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/"
+  },
+  "吉他（民谣）": {
+    "file": "sample-29.webp",
+    "original_hashes": [
+      "59a70f0a75ccfa44abfe60ebab2ed20900208e8fc7b6546ebde7cd63130dcc29"
+    ],
+    "source": "https://www.flickr.com/photos/30139045@N00/532089511",
+    "credit": "tawalker",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+  },
+  "自行车（通勤）": {
+    "file": "sample-30.webp",
+    "original_hashes": [
+      "82c8ac9a91cc3f58091f74b820d29d3766a01724375124b6706bbd49ee8a5491"
+    ]
+  }
+}

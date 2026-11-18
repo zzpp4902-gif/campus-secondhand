@@ -1,8 +1,12 @@
+import json
+import mimetypes
 import os
 import uuid
 import re
 from datetime import datetime
 from functools import wraps
+from hashlib import sha256
+from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
@@ -14,6 +18,7 @@ from flask_login import (LoginManager, UserMixin, current_user,
 from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
+mimetypes.add_type('image/webp', '.webp')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
@@ -24,6 +29,9 @@ login_manager.login_view = 'login'
 login_manager.login_message = '请先登录'
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
+DETAIL_PHOTOS = json.loads(
+    Path(__file__).with_name('sample_images').joinpath('detail_photos.json').read_text(encoding='utf-8')
+)
 
 
 def get_db():
@@ -246,7 +254,8 @@ def publish():
 @app.route('/item/<int:item_id>')
 def detail(item_id):
     item = query_db(
-        'SELECT i.*, u.nickname as seller_nickname, u.school as seller_school FROM items i JOIN users u ON i.seller_id = u.id WHERE i.id = %s',
+        'SELECT i.*, u.nickname as seller_nickname, u.school as seller_school, '
+        'u.username as seller_username FROM items i JOIN users u ON i.seller_id = u.id WHERE i.id = %s',
         (item_id,), one=True)
     if not item:
         flash('商品不存在', 'error')
@@ -259,7 +268,15 @@ def detail(item_id):
         fav = query_db('SELECT id FROM favorites WHERE user_id = %s AND item_id = %s',
                        (current_user.id, item_id), one=True)
         is_favorited = fav is not None
-    return render_template('detail.html', item=item, messages=messages, is_favorited=is_favorited)
+    reference_photo = None
+    if item['seller_username'] == 'demo':
+        photo = DETAIL_PHOTOS.get(item['title'])
+        stored_image = item['image_base64'] or ''
+        # 用户后来上传的新图优先于示例参考图。
+        if photo and sha256(stored_image.encode('utf-8')).hexdigest() in photo['original_hashes']:
+            reference_photo = photo
+    return render_template('detail.html', item=item, messages=messages,
+                           is_favorited=is_favorited, reference_photo=reference_photo)
 
 
 @app.route('/item/<int:item_id>/edit', methods=['GET', 'POST'])

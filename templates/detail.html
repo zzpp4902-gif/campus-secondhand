@@ -2,13 +2,25 @@
 {% block title %}{{ item.title }} - 중고캠퍼스{% endblock %}
 {% block content %}
 <div class="detail-layout">
-    <div class="detail-gallery">
-        {% if item.image_base64 %}
+    <figure class="detail-gallery">
+        {% if reference_photo %}
+            <img src="{{ url_for('static', filename='product-photos/' ~ reference_photo.file) }}"
+                 alt="{{ item.title }}参考照片" class="detail-image detail-reference-image">
+            <figcaption class="detail-photo-caption">
+                <span>示例商品参考图</span>
+                {% if reference_photo.source %}
+                    <a href="{{ reference_photo.source }}" target="_blank" rel="noopener noreferrer">{{ reference_photo.credit or '图片来源' }}</a>
+                {% endif %}
+                {% if reference_photo.license_url %}
+                    <a href="{{ reference_photo.license_url }}" target="_blank" rel="noopener noreferrer">{{ reference_photo.license }}（已调整图片）</a>
+                {% endif %}
+            </figcaption>
+        {% elif item.image_base64 %}
             <img src="{{ item.image_base64 }}" alt="{{ item.title }}" class="detail-image">
         {% else %}
             <div class="detail-image" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:16px;min-height:380px;">暂无图片</div>
         {% endif %}
-    </div>
+    </figure>
 
     <div class="detail-card">
         <div class="detail-status-bar">
@@ -106,7 +118,7 @@
 
         {% if current_user.is_authenticated %}
             <form method="POST" action="{{ url_for('add_message', item_id=item.id) }}" class="message-input">
-                <input type="text" name="content" placeholder="写下你的留言..." required maxlength="500">
+                <input type="text" name="content" aria-label="商品留言" placeholder="写下你的留言..." required maxlength="500">
                 <button type="submit" class="btn btn-primary btn-sm">发送</button>
             </form>
         {% else %}

@@ -128,23 +128,55 @@ function setupApplyModal() {
     });
 }
 
-// 导航下拉菜单开关
-function toggleDropdown(id) {
-    const dropdown = document.getElementById(id).closest('.nav-dropdown');
-    const wasOpen = dropdown.classList.contains('open');
-    // 先关闭所有下拉
-    document.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
-    // 再切换当前
-    if (!wasOpen) {
-        dropdown.classList.add('open');
-    }
-}
+function setupFeaturesMenu() {
+    const menu = document.querySelector('.mega-menu');
+    const trigger = menu.querySelector('.mega-trigger');
+    const panel = document.getElementById(trigger.getAttribute('aria-controls'));
+    const desktopHover = matchMedia('(min-width: 769px) and (hover: hover)');
+    let pinned = false;
+    let hoverTimer;
 
-// 点击外部关闭所有下拉
-function setupDropdownClose() {
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.nav-dropdown')) {
-            document.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
+    function setOpen(open) {
+        panel.hidden = !open;
+        trigger.setAttribute('aria-expanded', String(open));
+    }
+
+    function close() {
+        pinned = false;
+        clearTimeout(hoverTimer);
+        setOpen(false);
+    }
+
+    menu.addEventListener('pointerenter', event => {
+        if (desktopHover.matches && event.pointerType === 'mouse') {
+            clearTimeout(hoverTimer);
+            setOpen(true);
+        }
+    });
+    menu.addEventListener('pointerleave', event => {
+        if (desktopHover.matches && event.pointerType === 'mouse' && !pinned && !panel.contains(document.activeElement)) {
+            hoverTimer = setTimeout(close, 220);
+        }
+    });
+    trigger.addEventListener('click', () => {
+        if (pinned) {
+            close();
+        } else {
+            clearTimeout(hoverTimer);
+            pinned = true;
+            setOpen(true);
+        }
+    });
+    document.addEventListener('click', event => {
+        if (!menu.contains(event.target)) close();
+    });
+    menu.addEventListener('focusout', event => {
+        if (event.relatedTarget && !menu.contains(event.relatedTarget)) close();
+    });
+    menu.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !panel.hidden) {
+            close();
+            trigger.focus();
         }
     });
 }
@@ -155,5 +187,5 @@ document.addEventListener('DOMContentLoaded', function() {
     setupPublishForm('publishForm');
     setupRegisterForm();
     setupApplyModal();
-    setupDropdownClose();
+    setupFeaturesMenu();
 });

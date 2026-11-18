@@ -4,22 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}중고캠퍼스 校园二手圈{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=2) }}">
 </head>
 <body>
     <nav class="navbar">
-        <a href="{{ url_for('index') }}" class="navbar-brand">
-            <span class="navbar-brand-icon">🛍️</span>
-            <span>중고캠퍼스 校园二手圈</span>
+        <a href="{{ url_for('index') }}" class="navbar-brand" aria-label="중고캠퍼스 校园二手圈">
+            <span class="navbar-brand-icon" aria-hidden="true">🛍️</span>
+            <span><span class="navbar-brand-ko" lang="ko">중고캠퍼스 </span>校园二手圈</span>
         </a>
 
         <div class="navbar-links">
-            <!-- 大型悬浮菜单：鼠标移上去淡入展开 -->
             <div class="mega-menu">
-                <button class="mega-trigger">
-                    全部功能 <span class="dropdown-arrow">▾</span>
+                <button type="button" class="mega-trigger" aria-expanded="false" aria-controls="all-features">
+                    全部功能 <span class="dropdown-arrow" aria-hidden="true">▾</span>
                 </button>
-                <div class="mega-panel">
+                <div class="mega-panel" id="all-features" hidden>
                     <div class="mega-column">
                         <div class="mega-column-title">商品分类</div>
                         <div class="mega-grid">
@@ -144,6 +143,6 @@
         중고캠퍼스 · 校园二手物品交易平台 · 课程实践项目
     </footer>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v=2) }}"></script>
 </body>
 </html>

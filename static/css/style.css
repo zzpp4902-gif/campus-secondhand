@@ -130,6 +130,7 @@ img {
     color: var(--primary);
     letter-spacing: -0.3px;
     padding: 6px 0;
+    white-space: nowrap;
     transition: transform var(--transition-spring), opacity var(--transition-fast);
 }
 
@@ -141,6 +142,7 @@ img {
 .navbar-brand-icon {
     width: 32px;
     height: 32px;
+    flex-shrink: 0;
     border-radius: 9px;
     background: var(--primary-gradient);
     color: #fff;
@@ -155,15 +157,12 @@ img {
     display: flex;
     align-items: center;
     gap: 20px;
+    flex-shrink: 0;
 }
 
 /* ==========================================================================
    大型悬浮菜单 (Mega Menu)
    ========================================================================== */
-.mega-menu {
-    position: relative;
-}
-
 .mega-trigger {
     background: transparent;
     border: 1px solid transparent;
@@ -178,10 +177,11 @@ img {
     align-items: center;
     gap: 6px;
     font-family: inherit;
+    white-space: nowrap;
 }
 
 .mega-trigger:hover,
-.mega-menu:hover .mega-trigger {
+.mega-trigger[aria-expanded="true"] {
     color: var(--primary);
     background: var(--primary-light);
     border-color: rgba(255, 94, 54, 0.15);
@@ -193,18 +193,19 @@ img {
     transition: transform var(--transition-spring), color var(--transition-fast);
 }
 
-.mega-menu:hover .dropdown-arrow {
+.mega-trigger[aria-expanded="true"] .dropdown-arrow {
     transform: rotate(180deg);
     color: var(--primary);
 }
 
-/* 悬浮面板 */
 .mega-panel {
     position: absolute;
-    top: calc(100% + 14px);
-    right: 0;
-    transform: translateY(-10px) scale(0.97);
-    min-width: 820px;
+    top: calc(100% + 8px);
+    right: 32px;
+    width: min(820px, calc(100% - 64px));
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: #FFFFFF;
     border: 1px solid var(--border-light);
     border-radius: var(--radius-xl);
@@ -212,30 +213,11 @@ img {
     padding: 24px;
     display: flex;
     gap: 20px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity var(--transition-base), transform var(--transition-spring), visibility var(--transition-base);
     z-index: 300;
 }
 
-.mega-menu:hover .mega-panel {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0) scale(1);
-}
-
-/* 面板三角箭头 */
-.mega-panel::before {
-    content: '';
-    position: absolute;
-    top: -7px;
-    right: 46px;
-    transform: rotate(45deg);
-    width: 14px;
-    height: 14px;
-    background: #FFFFFF;
-    border-left: 1px solid var(--border-light);
-    border-top: 1px solid var(--border-light);
+.mega-panel[hidden] {
+    display: none;
 }
 
 .mega-column {
@@ -922,6 +904,7 @@ img {
     overflow: hidden;
     box-shadow: var(--shadow-md);
     position: relative;
+    margin: 0;
 }
 
 .detail-image {
@@ -930,6 +913,26 @@ img {
     object-fit: contain;
     background: #F8FAFC;
     display: block;
+}
+
+.detail-reference-image {
+    aspect-ratio: 4 / 3;
+    background: #f5f5f2;
+}
+
+.detail-photo-caption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 10px 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    border-top: 1px solid var(--border-light);
+}
+
+.detail-photo-caption a {
+    text-decoration: underline;
+    overflow-wrap: anywhere;
 }
 
 .detail-card {
@@ -1064,6 +1067,7 @@ img {
 
 .message-input input {
     flex: 1;
+    min-width: 0;
     padding: 12px 18px;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
@@ -1081,6 +1085,8 @@ img {
 }
 
 .message-input button {
+    flex-shrink: 0;
+    white-space: nowrap;
     padding: 12px 28px;
 }
 
@@ -1547,20 +1553,41 @@ img {
         gap: 18px;
     }
     .detail-layout {
-        grid-template-columns: 1fr;
-    }
-    .mega-panel {
-        min-width: 720px;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
 @media (max-width: 768px) {
     .navbar {
-        padding: 0 16px;
+        padding: 0 12px;
         height: 58px;
+        gap: 8px;
     }
     .navbar-brand {
-        font-size: 17px;
+        font-size: 15px;
+        gap: 6px;
+    }
+    .navbar-brand-ko {
+        display: none;
+    }
+    .navbar-brand-icon {
+        width: 28px;
+        height: 28px;
+    }
+    .navbar-links {
+        gap: 6px;
+    }
+    .mega-trigger,
+    .nav-publish-btn {
+        padding-inline: 8px;
+        font-size: 13px;
+    }
+    .mega-trigger {
+        gap: 4px;
+        min-height: 44px;
+    }
+    .nav-publish-btn {
+        min-height: 40px;
     }
     .items-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -1579,11 +1606,14 @@ img {
         width: 100%;
     }
     .mega-panel {
-        min-width: 90vw;
-        right: -8px;
+        inset-inline: 12px;
+        width: auto;
         flex-direction: column;
-        max-height: 75vh;
-        overflow-y: auto;
+        gap: 12px;
+        padding: 16px;
+    }
+    .mega-column {
+        flex: none;
     }
     .mega-divider {
         width: 100%;
@@ -1592,6 +1622,15 @@ img {
     }
     .form-card {
         padding: 24px 20px;
+    }
+    .message-section {
+        padding: 20px 16px;
+    }
+    .message-input {
+        gap: 8px;
+    }
+    .message-input button {
+        padding-inline: 16px;
     }
     .profile-item {
         flex-direction: column;
@@ -1610,6 +1649,12 @@ img {
 @media (max-width: 480px) {
     .items-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 350px) {
+    .navbar .nav-chat-btn {
+        display: none;
     }
 }
 
