@@ -74,7 +74,7 @@
                                         <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">留言：{{ app.message }}</div>
                                     {% endif %}
                                     <div class="application-actions">
-                                        {% if app.status == '申请中' %}
+                                        {% if app.status == '申请中' and item.status == '在售' %}
                                             <form method="POST" action="{{ url_for('accept_application', app_id=app.id) }}" style="display:inline;">
                                                 <button type="submit" class="btn btn-primary btn-sm">同意约定</button>
                                             </form>

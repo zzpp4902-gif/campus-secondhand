@@ -3,13 +3,13 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/demo-payment.css') }}">
 <script defer src="https://js.tosspayments.com/v2/standard"></script>
-<script defer src="{{ url_for('static', filename='js/demo-payment.js', v=2) }}"></script>
+<script defer src="{{ url_for('static', filename='js/demo-payment.js', v=3) }}"></script>
 {% endblock %}
 {% block content %}
 <section class="demo-payment">
     <p class="demo-payment-label">课程演示 · 测试环境</p>
     <h1>Toss 模拟支付</h1>
-    <p class="demo-payment-description">选择一种测试支付方式。测试环境不会扣款。</p>
+    <p class="demo-payment-description">测试环境不会扣款。确认模拟支付后，商品会标为已售。</p>
     <div class="demo-payment-summary">
         <div>
             <span>演示商品</span>
@@ -26,6 +26,7 @@
     <noscript><p>启用 JavaScript 后才能打开 Toss 测试结账。</p></noscript>
     <div class="demo-payment-actions">
         <a class="btn btn-secondary" href="{{ url_for('detail', item_id=order.item_id) }}">返回商品</a>
+        <a class="btn btn-secondary" href="{{ url_for('toss_demo.qr', order_id=order.order_id) }}">改用模拟扫码</a>
         <button class="btn btn-primary" id="demo-payment-open" type="button" disabled>打开 Toss 测试支付</button>
     </div>
     <script type="application/json" id="demo-payment-config">{{ payment_config|tojson }}</script>

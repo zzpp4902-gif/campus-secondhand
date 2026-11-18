@@ -9,13 +9,17 @@ from urllib.request import Request, urlopen
 from uuid import uuid4
 
 import psycopg2
+import qrcode
 from flask import Blueprint, abort, current_app, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from qrcode.image.svg import SvgPathFillImage
 
 
 ORDER_ID = re.compile(r'[a-f0-9]{32}')
 SUPPORTED_RESULTS = {'DONE', 'WAITING_FOR_DEPOSIT', 'CANCELED', 'ABORTED', 'EXPIRED'}
 MINIMUM_TEST_AMOUNT = 200
+QR_TTL_SECONDS = 600
 
 
 class TossRequestError(Exception):
@@ -103,6 +107,10 @@ def csrf_token():
     return session['toss_demo_csrf']
 
 
+def qr_serializer():
+    return URLSafeTimedSerializer(current_app.secret_key, salt='campus-demo-payment-qr-v1')
+
+
 def register_toss_demo(app, query_db, execute_db):
     configure_toss_demo(app)
     routes = Blueprint('toss_demo', __name__)
@@ -137,6 +145,33 @@ def register_toss_demo(app, query_db, execute_db):
     def result_redirect(order_id):
         return redirect(url_for('.result', order_id=order_id), code=303)
 
+    def complete_sale(order_id, payment_key, expected_states, source):
+        # Lock the order and move the item out of the marketplace in one statement.
+        execute_db(
+            """
+            WITH eligible_order AS (
+                SELECT order_id, item_id, amount FROM demo_payment_orders
+                WHERE order_id = %s AND status = ANY(%s) AND payment_key IS NOT DISTINCT FROM %s
+                FOR UPDATE
+            ),
+            sold_item AS (
+                UPDATE items AS i SET status = '已售' FROM eligible_order AS o
+                WHERE i.id = o.item_id AND i.status = '在售' AND i.price = o.amount
+                RETURNING i.id
+            ),
+            closed_applications AS (
+                UPDATE applications SET status = '已取消'
+                WHERE item_id IN (SELECT id FROM sold_item) AND status = '申请中'
+            )
+            UPDATE demo_payment_orders AS o
+            SET status = CASE WHEN EXISTS (SELECT 1 FROM sold_item) THEN 'DONE' ELSE 'FAILED' END,
+                confirmation_source = CASE WHEN EXISTS (SELECT 1 FROM sold_item) THEN %s END,
+                updated_at = CURRENT_TIMESTAMP
+            FROM eligible_order
+            WHERE o.order_id = eligible_order.order_id
+            """,
+            (order_id, expected_states, payment_key, source))
+
     def record_provider_result(order, data):
         if (data.get('orderId') != order['order_id'] or data.get('paymentKey') != order['payment_key']
                 or data.get('totalAmount') != order['amount'] or data.get('currency') != 'KRW'):
@@ -144,6 +179,10 @@ def register_toss_demo(app, query_db, execute_db):
             return
         state = data.get('status')
         if state not in SUPPORTED_RESULTS:
+            return
+        if state == 'DONE':
+            complete_sale(order['order_id'], order['payment_key'],
+                          ['CHECKING', 'WAITING_FOR_DEPOSIT'], 'TOSS_TEST')
             return
         if state in {'ABORTED', 'EXPIRED'}:
             state = 'FAILED'
@@ -172,7 +211,51 @@ def register_toss_demo(app, query_db, execute_db):
             RETURNING order_id
             """,
             (uuid4().hex, current_user.id, item_id, item['title'], item['price']), returning=True)
-        return redirect(url_for('.checkout', order_id=order['order_id']), code=303)
+        endpoint = '.qr' if request.form.get('method') == 'qr' else '.checkout'
+        return redirect(url_for(endpoint, order_id=order['order_id']), code=303)
+
+    @routes.get('/demo-payment/qr/<order_id>')
+    @login_required
+    def qr(order_id):
+        order = get_order(order_id)
+        if order['status'] != 'READY':
+            return result_redirect(order_id)
+        token = qr_serializer().dumps(order_id)
+        scan_path = url_for('.qr_confirm', token=token)
+        scan_url = current_app.config['TOSS_DEMO_ORIGIN'] + scan_path
+        qr_svg = qrcode.make(scan_url, image_factory=SvgPathFillImage).to_string()
+        return render_template(
+            'demo_payment_qr.html', order=order, scan_path=scan_path,
+            qr_image=base64.b64encode(qr_svg).decode('ascii'), ttl=QR_TTL_SECONDS)
+
+    @routes.get('/demo-payment/qr-status/<order_id>')
+    @login_required
+    def qr_status(order_id):
+        return {'status': get_order(order_id)['status']}
+
+    @routes.route('/demo-payment/scan/<token>', methods=['GET', 'POST'])
+    def qr_confirm(token):
+        try:
+            order_id = qr_serializer().loads(token, max_age=QR_TTL_SECONDS)
+        except SignatureExpired:
+            abort(410)
+        except BadSignature:
+            abort(404)
+        if not isinstance(order_id, str) or not ORDER_ID.fullmatch(order_id):
+            abort(404)
+        if request.method == 'POST':
+            require_csrf()
+            complete_sale(order_id, None, ['READY'], 'DEMO_QR')
+            return redirect(url_for('.qr_confirm', token=token), code=303)
+        order = query_db(
+            """
+            SELECT order_id, item_id, order_name, amount, status, confirmation_source
+            FROM demo_payment_orders WHERE order_id = %s
+            """,
+            (order_id,), one=True)
+        if not order:
+            abort(404)
+        return render_template('demo_payment_qr.html', order=order, token=token)
 
     @routes.get('/demo-payment/checkout/<order_id>')
     @login_required

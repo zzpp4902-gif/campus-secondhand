@@ -45,15 +45,20 @@
         {% if show_demo_payment %}
             <div class="detail-demo-payment" id="purchase">
                 {% if current_user.is_authenticated %}
-                    <form method="POST" action="{{ url_for('toss_demo.create', item_id=item.id) }}">
+                    <form class="detail-purchase-options" method="POST"
+                          action="{{ url_for('toss_demo.create', item_id=item.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ toss_demo_csrf() }}">
                         <button type="submit" class="btn btn-primary">购买</button>
+                        <button type="submit" name="method" value="qr" class="btn btn-secondary">模拟扫码</button>
                     </form>
                 {% else %}
-                    <a class="btn btn-primary"
-                       href="{{ url_for('login', next=url_for('detail', item_id=item.id, _anchor='purchase')) }}">购买</a>
+                    {% set purchase_login = url_for('login', next=url_for('detail', item_id=item.id, _anchor='purchase')) %}
+                    <div class="detail-purchase-options">
+                        <a class="btn btn-primary" href="{{ purchase_login }}">购买</a>
+                        <a class="btn btn-secondary" href="{{ purchase_login }}">模拟扫码</a>
+                    </div>
                 {% endif %}
-                <small>Toss 模拟支付 · 不会扣款</small>
+                <small>课程演示 · 确认后商品会标为已售，不会扣款</small>
             </div>
         {% endif %}
 
@@ -104,7 +109,9 @@
                 <a href="{{ url_for('login', next=url_for('chat_view', user_id=item.seller_id, item_id=item.id)) }}" class="btn btn-chat">
                     💬 私聊卖家
                 </a>
-                <a href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}" class="btn btn-primary">登录后申请</a>
+                {% if item.status == '在售' %}
+                    <a href="{{ url_for('login', next=url_for('detail', item_id=item.id)) }}" class="btn btn-primary">登录后申请</a>
+                {% endif %}
             {% endif %}
         </div>
     </div>

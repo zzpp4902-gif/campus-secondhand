@@ -92,13 +92,6 @@ def execute_db(query, args=(), returning=False):
             return cur.fetchone()
 
 
-def execute_transaction(operations):
-    conn = get_db()
-    with conn, conn.cursor() as cur:
-        for query, args in operations:
-            cur.execute(query, args)
-
-
 register_toss_demo(app, query_db, execute_db)
 
 
@@ -124,7 +117,7 @@ def check_single_session():
             # 顶号踢出逻辑
             logout_user()
             session.clear()
-            if request.endpoint not in ('login', 'register'):
+            if request.endpoint not in ('login', 'register', 'toss_demo.qr_confirm'):
                 flash('该账号已在其他设备或窗口登录，当前会话已下线。', 'warning')
                 return redirect(url_for('login'))
 
@@ -424,9 +417,16 @@ def apply_item(item_id):
     if existing:
         flash('您已提交过申请，请等待卖家确认', 'error')
         return redirect(url_for('detail', item_id=item_id))
-    execute_db(
-        'INSERT INTO applications (item_id, buyer_id, seller_id, status, message) VALUES (%s, %s, %s, %s, %s)',
-        (item_id, current_user.id, item['seller_id'], '申请中', message))
+    application = execute_db(
+        """
+        INSERT INTO applications (item_id, buyer_id, seller_id, status, message)
+        SELECT id, %s, seller_id, '申请中', %s FROM items WHERE id = %s AND status = '在售' FOR UPDATE
+        RETURNING id
+        """,
+        (current_user.id, message, item_id), returning=True)
+    if not application:
+        flash('该商品已不可申请', 'error')
+        return redirect(url_for('detail', item_id=item_id))
     flash('申请已提交，等待卖家确认', 'success')
     return redirect(url_for('profile', tab='applied'))
 
@@ -477,11 +477,20 @@ def accept_application(app_id):
     if application['status'] != '申请中':
         flash('该申请状态不可操作', 'error')
         return redirect(url_for('profile'))
-    # Atomic transaction for application status and item visibility
-    execute_transaction([
-        ('UPDATE applications SET status=%s WHERE id=%s', ('已约定', app_id)),
-        ('UPDATE items SET status=%s WHERE id=%s', ('已约定', application['item_id']))
-    ])
+    reserved = execute_db(
+        """
+        WITH reserved_item AS (
+            UPDATE items SET status = '已约定' WHERE id = %s AND status = '在售' RETURNING id
+        )
+        UPDATE applications SET status = '已约定'
+        FROM reserved_item WHERE applications.id = %s AND applications.item_id = reserved_item.id
+          AND applications.status = '申请中'
+        RETURNING applications.id
+        """,
+        (application['item_id'], app_id), returning=True)
+    if not reserved:
+        flash('商品已不可约定', 'error')
+        return redirect(url_for('profile'))
     flash('已同意约定', 'success')
     return redirect(url_for('profile'))
 
@@ -499,11 +508,20 @@ def complete_application(app_id):
     if application['status'] != '已约定':
         flash('该申请状态不可操作', 'error')
         return redirect(url_for('profile'))
-    # Atomic transaction for transaction completion
-    execute_transaction([
-        ('UPDATE applications SET status=%s WHERE id=%s', ('已完成', app_id)),
-        ('UPDATE items SET status=%s WHERE id=%s', ('已完成', application['item_id']))
-    ])
+    completed = execute_db(
+        """
+        WITH completed_item AS (
+            UPDATE items SET status = '已完成' WHERE id = %s AND status = '已约定' RETURNING id
+        )
+        UPDATE applications SET status = '已完成'
+        FROM completed_item WHERE applications.id = %s AND applications.item_id = completed_item.id
+          AND applications.status = '已约定'
+        RETURNING applications.id
+        """,
+        (application['item_id'], app_id), returning=True)
+    if not completed:
+        flash('商品已不可确认交接', 'error')
+        return redirect(url_for('profile'))
     flash('交易已完成', 'success')
     return redirect(url_for('profile'))
 

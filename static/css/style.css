@@ -1034,6 +1034,12 @@ img {
     scroll-margin-top: 80px;
 }
 
+.detail-purchase-options {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 8px;
+}
+
 .detail-demo-payment .btn {
     width: 100%;
     min-height: 46px;

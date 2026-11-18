@@ -14,7 +14,11 @@
         <p class="demo-payment-description">Toss 已返回认证结果，正在向 Toss 核对订单。</p>
     {% elif order.status == 'DONE' %}
         <h1>模拟支付成功</h1>
-        <p class="demo-payment-description">Toss 测试环境已确认本次支付。你可以回到商品继续约定面交。</p>
+        {% if order.confirmation_source %}
+            <p class="demo-payment-description">商品已标为已售，并从在售列表移除。本次演示没有扣款。</p>
+        {% else %}
+            <p class="demo-payment-description">这笔历史演示订单已确认。</p>
+        {% endif %}
     {% elif order.status == 'WAITING_FOR_DEPOSIT' %}
         <h1>等待模拟入账</h1>
         <p class="demo-payment-description">如能访问对应 Toss 测试商户，在测试后台执行模拟入账，然后点击「检查结果」。</p>
@@ -26,7 +30,7 @@
         <p class="demo-payment-description">可以返回商品重新发起演示。</p>
     {% elif order.status == 'FAILED' %}
         <h1>模拟支付未完成</h1>
-        <p class="demo-payment-description">可以返回商品重新发起演示。</p>
+        <p class="demo-payment-description">商品可能已售、价格已变更，或支付确认未成功。请回到商品查看状态。</p>
     {% else %}
         <h1>模拟支付尚未开始</h1>
         <p class="demo-payment-description">打开结账页继续演示。</p>
@@ -54,7 +58,7 @@
                 {% endif %}
                 <button class="btn btn-primary" type="submit">检查结果</button>
             </form>
-            <script defer src="{{ url_for('static', filename='js/demo-payment.js') }}"></script>
+            <script defer src="{{ url_for('static', filename='js/demo-payment.js', v=3) }}"></script>
         {% elif not invalid and order.status == 'READY' %}
             <a class="btn btn-primary" href="{{ url_for('toss_demo.checkout', order_id=order.order_id) }}">继续模拟支付</a>
         {% endif %}

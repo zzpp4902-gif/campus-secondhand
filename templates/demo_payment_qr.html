@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}模拟扫码付款 - 중고캠퍼스{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/demo-payment.css', v=2) }}">
+{% if qr_image %}<script defer src="{{ url_for('static', filename='js/demo-payment.js', v=3) }}"></script>{% endif %}
+{% endblock %}
+{% block content %}
+<section class="demo-payment">
+    <p class="demo-payment-label">课程演示 · 不会扣款</p>
+    {% if order.status == 'DONE' %}
+        <h1>模拟支付成功</h1>
+        <p class="demo-payment-description">商品已标为已售，并从在售列表移除。</p>
+    {% elif order.status != 'READY' %}
+        <h1>此演示订单已处理</h1>
+        <p class="demo-payment-description">请返回商品页查看当前状态。</p>
+    {% else %}
+        <h1>模拟扫码付款</h1>
+        <p class="demo-payment-description">确认后，网站会将这件商品标为已售。</p>
+    {% endif %}
+    <div class="demo-payment-summary">
+        <div><span>商品</span><strong>{{ order.order_name }}</strong></div>
+        <div><span>模拟金额</span><strong>₩{{ "{:,}".format(order.amount) }}</strong></div>
+    </div>
+    {% if qr_image %}
+        <a class="demo-qr" href="{{ scan_path }}">
+            <img src="data:image/svg+xml;base64,{{ qr_image }}" alt="扫码或点击打开模拟付款确认" width="240" height="240">
+            <span>手机扫码，或直接点击二维码</span>
+        </a>
+        <p id="demo-qr-status" class="demo-payment-description demo-qr-status" role="status"
+           data-status-url="{{ url_for('toss_demo.qr_status', order_id=order.order_id) }}"
+           data-result-url="{{ url_for('toss_demo.result', order_id=order.order_id) }}"
+           data-ttl="{{ ttl }}">等待确认 · 二维码有效期 10 分钟</p>
+    {% endif %}
+    <div class="demo-payment-actions">
+        <a class="btn btn-secondary" href="{{ url_for('detail', item_id=order.item_id) }}">查看商品</a>
+        {% if token and order.status == 'READY' %}
+            <form method="POST" action="{{ url_for('toss_demo.qr_confirm', token=token) }}">
+                <input type="hidden" name="csrf_token" value="{{ toss_demo_csrf() }}">
+                <button class="btn btn-primary" type="submit">确认模拟付款</button>
+            </form>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

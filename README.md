@@ -96,7 +96,7 @@ python app.py
 
 在 Render 中设置 `TOSS_DEMO_ENABLED=1`、`TOSS_DEMO_ORIGIN`（网站的 HTTPS 地址），以及同一套 Toss 组件测试密钥 `TOSS_CLIENT_KEY` 和 `TOSS_SECRET_KEY`。默认金额至少为 ₩200 的在售商品都可以演示，设定 `TOSS_DEMO_ITEM_ID` 可将入口限制到指定商品。配置参考 [Toss 测试环境说明](https://docs.tosspayments.com/guides/v2/get-started/environment)。
 
-在商品详情点击「购买」，打开 Toss 测试结账。服务器确认的结果记录在独立的 `demo_payment_orders` 表，不影响商品和线下面交状态。
+在商品详情点击「购买」打开 Toss 测试结账，或点击「模拟扫码」生成有效期为 10 分钟的演示二维码。二维码可直接点击，也可用另一台设备扫码后确认。确认成功或收到并核实 Toss 测试支付的 `DONE` 状态后，系统在同一个数据库操作中记录演示订单、将对应商品标为已售，并结束其余待处理申请。
 
 要关闭演示入口，在 Render 将 `TOSS_DEMO_ENABLED` 改为 `0` 并部署。要恢复整个发布前版本，在 Render 的 Deploys 中回滚到 `96e39ae`。GitHub 回退点为 `backup/pre-toss-2026-11-18`。
 

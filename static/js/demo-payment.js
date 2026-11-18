@@ -8,6 +8,30 @@ if (paymentConfig) {
     loadDemoCheckout();
 }
 
+const qrStatus = document.getElementById('demo-qr-status');
+if (qrStatus) {
+    const expiresAt = Date.now() + Number(qrStatus.dataset.ttl) * 1000;
+    async function checkQrStatus() {
+        if (Date.now() >= expiresAt) {
+            qrStatus.textContent = '二维码已过期，刷新页面可生成新二维码。';
+            return;
+        }
+        try {
+            if (!document.hidden) {
+                const response = await fetch(qrStatus.dataset.statusUrl, {cache: 'no-store'});
+                if (response.ok && !response.redirected && (await response.json()).status !== 'READY') {
+                    window.location.replace(qrStatus.dataset.resultUrl);
+                    return;
+                }
+            }
+        } catch (error) {
+            // Retry the status check after a brief network interruption.
+        }
+        setTimeout(checkQrStatus, 2000);
+    }
+    setTimeout(checkQrStatus, 2000);
+}
+
 async function loadDemoCheckout() {
     const config = JSON.parse(paymentConfig.textContent);
     const status = document.getElementById('demo-payment-status');

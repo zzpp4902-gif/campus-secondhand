@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS demo_payment_orders (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_demo_payment_ready
     ON demo_payment_orders(buyer_id, item_id) WHERE status = 'READY';
+ALTER TABLE demo_payment_orders ADD COLUMN IF NOT EXISTS confirmation_source VARCHAR(16);
 """
 
 
