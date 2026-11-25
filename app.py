@@ -95,6 +95,9 @@ def execute_db(query, args=(), returning=False):
 register_toss_demo(app, query_db, execute_db)
 
 
+SESSION_IDLE_MINUTES = 15
+
+
 class User(UserMixin):
     def __init__(self, user_dict):
         self.id = str(user_dict['id'])
@@ -102,29 +105,56 @@ class User(UserMixin):
         self.nickname = user_dict['nickname']
         self.school = user_dict['school']
         self.session_token = user_dict.get('session_token')
-
+        self.session_alive = bool(user_dict.get('session_alive'))
 
 
 @app.before_request
 def check_single_session():
-    # 静态资源、健康检查接口跳过校验
+    # 静态资源、健康检查、商品图片跳过校验
     if request.endpoint in ('static', 'healthz', 'item_photo') or request.path.startswith('/static'):
         return None
 
     if current_user.is_authenticated:
         client_token = session.get('session_token')
-        if not current_user.session_token or current_user.session_token != client_token:
-            # 顶号踢出逻辑
+        # 校验当前会话令牌有效且未超过活跃超时时间，防止旧锁失效或伪造会话
+        if not current_user.session_token or current_user.session_token != client_token or not current_user.session_alive:
+            if client_token and current_user.session_token == client_token and not current_user.session_alive:
+                try:
+                    execute_db(
+                        'UPDATE users SET session_token = NULL, last_active_at = NULL WHERE id = %s AND session_token = %s',
+                        (current_user.id, client_token)
+                    )
+                except Exception:
+                    pass
             logout_user()
             session.clear()
             if request.endpoint not in ('login', 'register', 'toss_demo.qr_confirm'):
-                flash('该账号已在其他设备或窗口登录，当前会话已下线。', 'warning')
+                flash('登录会话已失效或超时，请重新登录。', 'warning')
                 return redirect(url_for('login'))
+        else:
+            # 节流刷新活跃时间戳（每 30 秒最多写一次数据库），确保在线状态不因久用而超时
+            now_ts = datetime.now().timestamp()
+            if now_ts - session.get('last_touch_ts', 0) >= 30:
+                try:
+                    execute_db(
+                        'UPDATE users SET last_active_at = CURRENT_TIMESTAMP WHERE id = %s AND session_token = %s',
+                        (current_user.id, client_token)
+                    )
+                    session['last_touch_ts'] = now_ts
+                except Exception:
+                    pass
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    user = query_db('SELECT * FROM users WHERE id = %s', (user_id,), one=True)
+    user = query_db(
+        f"""
+        SELECT *,
+               (last_active_at IS NOT NULL
+                AND last_active_at >= CURRENT_TIMESTAMP - INTERVAL '{SESSION_IDLE_MINUTES} minutes') AS session_alive
+        FROM users WHERE id = %s
+        """,
+        (user_id,), one=True)
     return User(user) if user else None
 
 
@@ -257,11 +287,41 @@ def login():
         password = request.form.get('password', '')
         user = query_db('SELECT * FROM users WHERE username = %s', (username,), one=True)
         if user and check_password_hash(user['password_hash'], password):
-            # 单设备登录（顶号机制）：每次登录生成新的 session_token 写入数据库
+            # 若当前会话已登录其他账号，换号前先安全释放旧账号的在线锁，防止旧账号被占用到超时
+            prev_token = session.get('session_token')
+            if current_user.is_authenticated and str(current_user.id) != str(user['id']) and prev_token:
+                try:
+                    execute_db(
+                        'UPDATE users SET session_token = NULL, last_active_at = NULL WHERE id = %s AND session_token = %s',
+                        (current_user.id, prev_token)
+                    )
+                except Exception:
+                    pass
+
+            # 单账号互斥占位：仅当该账号未在线或活跃已超时，才允许写入新令牌；否则拦截并提示
             token = str(uuid.uuid4())
-            execute_db('UPDATE users SET session_token = %s WHERE id = %s', (token, user['id']))
+            claimed = execute_db(
+                f"""
+                UPDATE users
+                SET session_token = %s,
+                    last_active_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                  AND (
+                      session_token IS NULL
+                      OR last_active_at IS NULL
+                      OR last_active_at < CURRENT_TIMESTAMP - INTERVAL '{SESSION_IDLE_MINUTES} minutes'
+                  )
+                RETURNING id
+                """,
+                (token, user['id']), returning=True)
+            if not claimed:
+                flash('此账号已登录', 'error')
+                return redirect(url_for('login', next=next_page))
+
             user['session_token'] = token
+            user['session_alive'] = True
             session['session_token'] = token
+            session['last_touch_ts'] = datetime.now().timestamp()
             login_user(User(user))
             flash('登录成功', 'success')
             return redirect(next_page or url_for('index'))
@@ -277,10 +337,16 @@ def login():
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
-        try:
-            execute_db('UPDATE users SET session_token = NULL WHERE id = %s', (current_user.id,))
-        except Exception:
-            pass
+        client_token = session.get('session_token')
+        if client_token:
+            try:
+                # 仅清理与当前客户端令牌一致的在线锁，避免误清他人的有效登录
+                execute_db(
+                    'UPDATE users SET session_token = NULL, last_active_at = NULL WHERE id = %s AND session_token = %s',
+                    (current_user.id, client_token)
+                )
+            except Exception:
+                pass
         logout_user()
     session.clear()
     flash('已退出登录', 'success')
